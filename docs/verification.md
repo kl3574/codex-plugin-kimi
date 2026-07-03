@@ -27,6 +27,10 @@ The current managed Codex sandbox may make `/home/lkx/.codex/config.toml`
 read-only. In that case, `enable` should print the exact TOML block to add and
 the plugin can still be validated with a temporary `CODEX_HOME`.
 
+Codex marketplace registration and plugin installation are separate steps. The
+plugin is only fully active after `codex plugin add
+codex-plugin-kimi@kimi-review-private` reports a successful install.
+
 ## 2026-07-03 Local Results
 
 - `npm run check`: passed. Static helper parse, local plugin validation, and

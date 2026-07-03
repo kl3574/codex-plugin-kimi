@@ -84,6 +84,13 @@ Run `--dry-run` first if you want to inspect the planned block.
 This repository also includes `.agents/plugins/marketplace.json`, so the
 checkout can be used directly as a local Codex marketplace source.
 
+After the marketplace is registered, install the plugin from that marketplace:
+
+```bash
+codex plugin add codex-plugin-kimi@kimi-review-private
+codex plugin list
+```
+
 ## Review Modes
 
 - Working tree review: staged, unstaged, and untracked text files.
