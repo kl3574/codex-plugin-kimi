@@ -14,6 +14,19 @@ function exists(rel) {
   return fs.existsSync(path.join(root, rel));
 }
 
+function isExecutable(rel) {
+  try {
+    return Boolean(fs.statSync(path.join(root, rel)).mode & 0o111);
+  } catch {
+    return false;
+  }
+}
+
+function readIfExists(rel) {
+  const full = path.join(root, rel);
+  return fs.existsSync(full) ? fs.readFileSync(full, "utf8") : "";
+}
+
 if (!exists(".codex-plugin/plugin.json")) errors.push("missing .codex-plugin/plugin.json");
 if (!exists(".agents/plugins/marketplace.json")) errors.push("missing local marketplace file");
 if (exists("kimi.plugin.json")) errors.push("active Codex plugin must not contain kimi.plugin.json");
@@ -42,7 +55,7 @@ try {
   errors.push(`marketplace JSON failed to parse: ${error.message}`);
 }
 
-for (const command of ["setup", "doctor", "enable", "review", "adversarial-review", "elite-review", "deep-review", "security-review", "folder", "status", "result", "cancel"]) {
+for (const command of ["setup", "doctor", "install-bin", "enable", "review", "adversarial-review", "elite-review", "deep-review", "security-review", "folder", "status", "result", "cancel"]) {
   if (!exists(`commands/${command}.md`)) errors.push(`missing command ${command}`);
 }
 
@@ -51,6 +64,18 @@ for (const skill of ["using-codex-plugin-kimi", "codex-kimi-review", "codex-kimi
 }
 
 if (!exists("scripts/codex-kimi-review.mjs")) errors.push("missing helper script");
+else if (!isExecutable("scripts/codex-kimi-review.mjs")) errors.push("helper script must be executable for package.json bin/PATH alias use");
+
+const docsToCheck = [
+  "README.md",
+  ...fs.readdirSync(path.join(root, "commands")).map((file) => `commands/${file}`),
+  ...fs.readdirSync(path.join(root, "skills")).map((dir) => `skills/${dir}/SKILL.md`)
+];
+for (const rel of docsToCheck) {
+  if (readIfExists(rel).includes("/home/lkx/codex-plugin-kimi/scripts/codex-kimi-review.mjs")) {
+    errors.push(`${rel} must not hardcode the local checkout helper path`);
+  }
+}
 
 if (errors.length) {
   console.error(errors.join("\n"));

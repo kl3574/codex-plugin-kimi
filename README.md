@@ -30,6 +30,7 @@ The plugin provides these slash-command prompt files under `commands/`:
 
 - `/codex-plugin-kimi:setup`
 - `/codex-plugin-kimi:doctor`
+- `/codex-plugin-kimi:install-bin`
 - `/codex-plugin-kimi:enable`
 - `/codex-plugin-kimi:review`
 - `/codex-plugin-kimi:adversarial-review`
@@ -47,16 +48,19 @@ The command files delegate to:
 codex-kimi-review <command> <args>
 ```
 
-If the helper is not installed globally, use:
+The installed plugin exposes `codex-kimi-review` through the plugin package
+`bin` entry. If the helper is not available on PATH in an older installation,
+reinstall or upgrade the plugin. For local checkout debugging, use:
 
 ```bash
-node /home/lkx/codex-plugin-kimi/scripts/codex-kimi-review.mjs <command> <args>
+node <plugin-root>/scripts/codex-kimi-review.mjs <command> <args>
 ```
 
 ## Helper Examples
 
 ```bash
 node scripts/codex-kimi-review.mjs setup
+node scripts/codex-kimi-review.mjs install-bin
 node scripts/codex-kimi-review.mjs doctor --json
 node scripts/codex-kimi-review.mjs review --path .
 node scripts/codex-kimi-review.mjs review --path . --preset ship

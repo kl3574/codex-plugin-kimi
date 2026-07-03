@@ -91,3 +91,15 @@ codex-plugin-kimi@kimi-review` reports a successful install.
   then `codex plugin add codex-plugin-kimi@kimi-review --json`, returned
   version `0.1.1`; `codex plugin list` reported
   `codex-plugin-kimi@kimi-review` as `installed, enabled`.
+
+## 2026-07-03 Helper Bin Fix
+
+- Bumped plugin and package version to `0.1.2`.
+- Marked `scripts/codex-kimi-review.mjs` executable so the package `bin`
+  entry can be exposed as the `codex-kimi-review` PATH helper by Codex.
+- Added validation coverage that fails when the helper script is not executable.
+- Added `codex-kimi-review install-bin` and `/codex-plugin-kimi:install-bin`
+  to install a `codex-kimi-review` shim into a PATH directory when Codex cannot
+  create plugin PATH aliases in a restricted session.
+- Removed hardcoded local checkout helper paths from command and skill fallback
+  docs; fallbacks now use `<plugin-root>/scripts/codex-kimi-review.mjs`.

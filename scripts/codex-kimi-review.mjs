@@ -88,6 +88,7 @@ function usage() {
   return [
     "Usage:",
     "  codex-kimi-review enable [--json] [--dry-run] [--config <path>]",
+    "  codex-kimi-review install-bin [--json] [--dry-run] [--target <path>]",
     "  codex-kimi-review setup [--json]",
     "  codex-kimi-review doctor [--json] [--probe-runtime]",
     "  codex-kimi-review folder <path> [flags] [focus text]",
@@ -132,7 +133,7 @@ function parseArgs(argv) {
   const positionals = [];
   const multi = new Set(["add-dir", "exclude", "system-prompt-extra", "web-domain", "mcp-config"]);
   const booleans = new Set(["background", "json", "quiet", "debug", "legacy", "agentic", "long-context", "unrestricted", "probe-runtime", "dry-run", "inherit-mcp", "strict-mcp"]);
-  const values = new Set(["path", "base", "commit", "title", "scope", "preset", "job-dir", "model", "effort", "timeout-ms", "cwd", "focus", "snapshot-temp-root", "config", "profile", "permission-mode", "max-budget-usd", "max-context-bytes"]);
+  const values = new Set(["path", "base", "commit", "title", "scope", "preset", "job-dir", "model", "effort", "timeout-ms", "cwd", "focus", "snapshot-temp-root", "config", "target", "profile", "permission-mode", "max-budget-usd", "max-context-bytes"]);
 
   for (let index = 0; index < argv.length; index += 1) {
     const token = argv[index];
@@ -669,6 +670,66 @@ function handleSetup(argv) {
   if (!payload.ok) process.exitCode = 1;
 }
 
+function defaultBinTarget() {
+  if (process.platform === "win32") {
+    return path.join(os.homedir(), ".local", "bin", "codex-kimi-review.cmd");
+  }
+  return path.join(os.homedir(), ".local", "bin", "codex-kimi-review");
+}
+
+function shellDoubleQuoted(value) {
+  return `"${String(value).replaceAll("\\", "\\\\").replaceAll('"', '\\"').replaceAll("$", "\\$").replaceAll("`", "\\`")}"`;
+}
+
+function binShimContent() {
+  if (process.platform === "win32") {
+    return `@echo off\r\n"${process.execPath}" "${SCRIPT_PATH}" %*\r\n`;
+  }
+  return [
+    "#!/usr/bin/env bash",
+    `exec ${shellDoubleQuoted(process.execPath)} ${shellDoubleQuoted(SCRIPT_PATH)} "$@"`,
+    ""
+  ].join("\n");
+}
+
+function handleInstallBin(argv) {
+  const { options } = parseArgs(argv);
+  const target = path.resolve(options.target ?? defaultBinTarget());
+  let writeError = null;
+  let wrote = false;
+  if (!options["dry-run"]) {
+    try {
+      fs.mkdirSync(path.dirname(target), { recursive: true });
+      fs.writeFileSync(target, binShimContent(), { mode: 0o755 });
+      if (process.platform !== "win32") fs.chmodSync(target, 0o755);
+      wrote = true;
+    } catch (error) {
+      writeError = error;
+    }
+  }
+  const result = {
+    ok: !writeError,
+    target,
+    wrote,
+    dry_run: Boolean(options["dry-run"]),
+    helper: SCRIPT_PATH,
+    error: writeError ? writeError.message : null
+  };
+  if (options.json) console.log(JSON.stringify(result, null, 2));
+  else {
+    console.log("# Codex Kimi Bin Install\n");
+    if (writeError) {
+      console.log(`FAIL ${writeError.message}`);
+    } else if (options["dry-run"]) {
+      console.log(`Dry run; would write: ${target}`);
+    } else {
+      console.log(`Installed: ${target}`);
+    }
+    console.log(`Helper: ${SCRIPT_PATH}`);
+  }
+  if (writeError) process.exitCode = 1;
+}
+
 function handleDoctor(argv) {
   const { options } = parseArgs(argv);
   const cwd = path.resolve(options.cwd ?? process.cwd());
@@ -961,6 +1022,9 @@ async function main() {
         break;
       case "enable":
         handleEnable(argv);
+        break;
+      case "install-bin":
+        handleInstallBin(argv);
         break;
       case "setup":
         handleSetup(argv);

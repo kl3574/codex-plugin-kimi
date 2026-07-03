@@ -13,16 +13,17 @@ Use this skill when the user asks to run, configure, diagnose, or explain
 1. Confirm the active plugin root is `/home/lkx/codex-plugin-kimi` unless the
    user names another path.
 2. Use `codex-kimi-review setup` for installation checks.
-3. Use `codex-kimi-review doctor` for plugin health checks.
-4. Use `codex-kimi-review review` or a named review lane for read-only review.
-5. Never modify repository files as part of a Kimi review command.
+3. Use `codex-kimi-review install-bin` if the helper is not on PATH.
+4. Use `codex-kimi-review doctor` for plugin health checks.
+5. Use `codex-kimi-review review` or a named review lane for read-only review.
+6. Never modify repository files as part of a Kimi review command.
 
 ## Helper Fallback
 
 If `codex-kimi-review` is not on PATH, run:
 
 ```bash
-node /home/lkx/codex-plugin-kimi/scripts/codex-kimi-review.mjs <command>
+node <plugin-root>/scripts/codex-kimi-review.mjs <command>
 ```
 
 ## Notes

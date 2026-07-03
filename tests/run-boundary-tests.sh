@@ -118,6 +118,23 @@ test_kimi_preserves_node_env_proxy_override() {
   contains "$out" '"ok": true'
 }
 
+test_install_bin_writes_executable_shim() {
+  local target out shim_out
+  target="$TMP/bin/codex-kimi-review"
+  out="$(run_helper install-bin --target "$target" --json 2>&1)" || {
+    printf '%s\n' "$out"
+    return 1
+  }
+  [ -x "$target" ] &&
+    contains "$out" "\"target\": \"$target\"" &&
+    contains "$out" '"wrote": true'
+  shim_out="$(PATH="$FAKE_BIN:$PATH" CODEX_KIMI_REVIEW_JOB_DIR="$JOB_DIR" "$target" setup --json 2>&1)" || {
+    printf '%s\n' "$shim_out"
+    return 1
+  }
+  contains "$shim_out" '"ok": true'
+}
+
 test_non_git_folder_review() {
   local dir out
   dir="$TMP/plain"
@@ -285,6 +302,7 @@ check "setup succeeds with fake kimi" test_setup_success
 check "setup fails when kimi is missing" test_setup_missing_kimi
 check "kimi child defaults NODE_USE_ENV_PROXY" test_kimi_defaults_node_env_proxy
 check "kimi child preserves NODE_USE_ENV_PROXY override" test_kimi_preserves_node_env_proxy_override
+check "install-bin writes executable shim" test_install_bin_writes_executable_shim
 check "non-git folder review calls kimi" test_non_git_folder_review
 check "empty diff exits cleanly" test_empty_diff
 check "untracked review calls kimi" test_untracked_review_calls_kimi
@@ -303,4 +321,4 @@ if [ "$FAILED" -ne 0 ]; then
   exit 1
 fi
 
-printf '17 test(s) passed\n'
+printf '18 test(s) passed\n'

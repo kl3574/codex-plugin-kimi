@@ -7,8 +7,8 @@ description: Show running and recent Kimi review jobs for the current workspace.
 ## Preflight
 
 1. Prefer the helper binary `codex-kimi-review` if it is available on PATH.
-2. If it is not available, run it from this checkout with
-   `node /home/lkx/codex-plugin-kimi/scripts/codex-kimi-review.mjs`.
+2. If it is not available, run it from the installed plugin root with
+   `node <plugin-root>/scripts/codex-kimi-review.mjs`.
 
 ## Plan
 
@@ -21,7 +21,7 @@ Use the exact argument tail the user supplied after `/codex-plugin-kimi:status`.
 - Preferred:
   `codex-kimi-review status <user-arguments>`
 - Fallback:
-  `node /home/lkx/codex-plugin-kimi/scripts/codex-kimi-review.mjs status <user-arguments>`
+  `node <plugin-root>/scripts/codex-kimi-review.mjs status <user-arguments>`
 
 Useful flags:
 

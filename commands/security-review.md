@@ -7,8 +7,8 @@ description: Run a security-focused Kimi Code review against the current workspa
 ## Preflight
 
 1. Prefer the helper binary `codex-kimi-review` if it is available on PATH.
-2. If it is not available, run it from this checkout with
-   `node /home/lkx/codex-plugin-kimi/scripts/codex-kimi-review.mjs`.
+2. If it is not available, run it from the installed plugin root with
+   `node <plugin-root>/scripts/codex-kimi-review.mjs`.
 
 ## Plan
 
@@ -23,7 +23,7 @@ Use the exact argument tail the user supplied after
 - Preferred:
   `codex-kimi-review security-review <user-arguments>`
 - Fallback:
-  `node /home/lkx/codex-plugin-kimi/scripts/codex-kimi-review.mjs security-review <user-arguments>`
+  `node <plugin-root>/scripts/codex-kimi-review.mjs security-review <user-arguments>`
 
 Useful flags:
 

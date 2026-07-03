@@ -8,6 +8,7 @@ an external reviewer runtime through a local helper.
 | codex-plugin-cc | codex-plugin-kimi |
 | --- | --- |
 | `codex-claude-review setup` | `codex-kimi-review setup` |
+| helper PATH shim | `codex-kimi-review install-bin` |
 | `codex-claude-review doctor` | `codex-kimi-review doctor` |
 | `codex-claude-review enable` | `codex-kimi-review enable` |
 | `codex-claude-review review` | `codex-kimi-review review` |

@@ -7,8 +7,8 @@ description: Register this local plugin in Codex config as a personal marketplac
 ## Preflight
 
 1. Prefer the helper binary `codex-kimi-review` if it is available on PATH.
-2. If it is not available, run it from this checkout with
-   `node /home/lkx/codex-plugin-kimi/scripts/codex-kimi-review.mjs`.
+2. If it is not available, run it from the installed plugin root with
+   `node <plugin-root>/scripts/codex-kimi-review.mjs`.
 
 ## Plan
 
@@ -22,7 +22,7 @@ Use the exact argument tail the user supplied after `/codex-plugin-kimi:enable`.
 - Preferred:
   `codex-kimi-review enable <user-arguments>`
 - Fallback:
-  `node /home/lkx/codex-plugin-kimi/scripts/codex-kimi-review.mjs enable <user-arguments>`
+  `node <plugin-root>/scripts/codex-kimi-review.mjs enable <user-arguments>`
 
 Useful flags:
 
