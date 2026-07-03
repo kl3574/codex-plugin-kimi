@@ -126,6 +126,45 @@ test_untracked_review_calls_kimi() {
   contains "$out" "FAKE_KIMI_PROMPT" && contains "$out" "working-tree"
 }
 
+test_untracked_symlink_is_not_followed() {
+  local repo secret out
+  repo="$(make_repo symlink)"
+  secret="$TMP/outside-secret.txt"
+  printf 'TOP_SECRET_DO_NOT_SEND\n' > "$secret"
+  ln -s "$secret" "$repo/secret-link"
+  out="$(run_helper review --path "$repo" 2>&1)" || {
+    printf '%s\n' "$out"
+    return 1
+  }
+  contains "$out" "secret-link" &&
+    contains "$out" "skipped: symlink" &&
+    ! contains "$out" "TOP_SECRET_DO_NOT_SEND"
+}
+
+test_context_budget_truncates_large_prompt() {
+  local dir out
+  dir="$TMP/large-folder"
+  mkdir -p "$dir"
+  awk 'BEGIN { for (i = 0; i < 5000; i++) print "alpha" }' > "$dir/a.txt"
+  awk 'BEGIN { for (i = 0; i < 5000; i++) print "omega" }' > "$dir/b.txt"
+  out="$(run_helper folder "$dir" --max-context-bytes 1200 2>&1)" || {
+    printf '%s\n' "$out"
+    return 1
+  }
+  contains "$out" "FAKE_KIMI_PROMPT" && contains "$out" "TRUNCATED"
+}
+
+test_timeout_reports_actionable_diagnostic() {
+  local repo out status
+  repo="$(make_repo timeout)"
+  printf 'changed\n' > "$repo/app.txt"
+  out="$(PATH="$FAKE_BIN:$PATH" CODEX_KIMI_REVIEW_JOB_DIR="$JOB_DIR" FAKE_KIMI_DELAY_MS=300 "$NODE_BIN" "$HELPER" review --path "$repo" --timeout-ms 50 2>&1)"
+  status=$?
+  [ "$status" -ne 0 ] &&
+    contains "$out" "Timed out after 50 ms" &&
+    contains "$out" "Kimi review failed"
+}
+
 test_preset_routes_to_security() {
   local repo out
   repo="$(make_repo preset)"
@@ -196,6 +235,9 @@ check "setup fails when kimi is missing" test_setup_missing_kimi
 check "non-git folder review calls kimi" test_non_git_folder_review
 check "empty diff exits cleanly" test_empty_diff
 check "untracked review calls kimi" test_untracked_review_calls_kimi
+check "untracked symlink is not followed" test_untracked_symlink_is_not_followed
+check "context budget truncates large prompt" test_context_budget_truncates_large_prompt
+check "timeout reports actionable diagnostic" test_timeout_reports_actionable_diagnostic
 check "preset routes to security review prompt" test_preset_routes_to_security
 check "invalid base ref reports git error" test_invalid_base
 check "background job completes and result is readable" test_background_result
@@ -206,4 +248,4 @@ if [ "$FAILED" -ne 0 ]; then
   exit 1
 fi
 
-printf '10 test(s) passed\n'
+printf '13 test(s) passed\n'

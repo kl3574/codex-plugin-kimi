@@ -35,6 +35,8 @@ Useful flags:
 - `--model <name>` - pass a model alias to `kimi -m`.
 - `--system-prompt-extra <text>` - append reviewer guidance.
 - `--exclude <basename>` - exclude names from directory snapshots.
+- `--max-context-bytes <n>` - cap context sent through `kimi -p`.
+- `--timeout-ms <n>` - fail with an explicit timeout diagnostic.
 
 ## Verification
 

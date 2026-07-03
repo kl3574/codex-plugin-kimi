@@ -28,6 +28,7 @@ Useful flags:
 
 - `--preset quick|ship|security|research|deep` - choose a review preset.
 - `--exclude <basename>` - exclude a file or directory basename.
+- `--max-context-bytes <n>` - cap context sent through `kimi -p`.
 - `--background` - run detached.
 
 ## Verification

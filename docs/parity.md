@@ -34,6 +34,10 @@ an external reviewer runtime through a local helper.
 - Branch diff with `--base <ref>`.
 - Single commit review with `--commit <sha>`.
 - Non-Git folder snapshots with bounded file size and binary skipping.
+- Symlinks and non-regular files are skipped so prompt snapshots do not follow
+  paths outside the reviewed tree.
+- Review context is capped before invoking `kimi -p`; override with
+  `--max-context-bytes` or `CODEX_KIMI_REVIEW_MAX_CONTEXT_BYTES`.
 
 ## Intentional Safety Boundary
 

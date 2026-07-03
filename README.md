@@ -55,6 +55,7 @@ node scripts/codex-kimi-review.mjs setup
 node scripts/codex-kimi-review.mjs doctor --json
 node scripts/codex-kimi-review.mjs review --path .
 node scripts/codex-kimi-review.mjs review --path . --preset ship
+node scripts/codex-kimi-review.mjs review --path . --max-context-bytes 900000
 node scripts/codex-kimi-review.mjs security-review --path . --background
 node scripts/codex-kimi-review.mjs status
 node scripts/codex-kimi-review.mjs result <job-id>
@@ -98,8 +99,11 @@ codex plugin list
 - Commit review: `--commit <sha>`.
 - Folder review: `folder <path>` or `--scope directory`.
 
-Binary files and large files are skipped in prompt snapshots. The helper never
-edits project files; it only builds review context and calls `kimi -p`.
+Binary files, symlinks, non-regular files, and large files are skipped in
+prompt snapshots. Review context is capped before calling `kimi -p`; use
+`--max-context-bytes <n>` or `CODEX_KIMI_REVIEW_MAX_CONTEXT_BYTES` to adjust the
+cap. The helper never edits project files; it only builds review context and
+calls `kimi -p`.
 
 ## Verification
 

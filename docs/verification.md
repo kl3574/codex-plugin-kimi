@@ -49,3 +49,14 @@ codex-plugin-kimi@kimi-review-private` reports a successful install.
   `CODEX_HOME=/tmp/codex-kimi-codex-home codex plugin add codex-plugin-kimi@kimi-review-private --json`
   returned version `0.1.0`, and `codex plugin list` then reported
   `codex-plugin-kimi@kimi-review-private` as `installed, enabled`.
+
+## 2026-07-03 Review Fixes
+
+- Added regression coverage for untracked symlink handling. Symlinks are now
+  skipped instead of followed, preventing prompt snapshots from reading targets
+  outside the reviewed repository.
+- Added `--max-context-bytes` and `CODEX_KIMI_REVIEW_MAX_CONTEXT_BYTES`.
+  Context is truncated with an explicit `TRUNCATED` marker before invoking
+  `kimi -p`.
+- Review timeout failures now print `Timed out after <n> ms`, plus exit status
+  or signal when available.
