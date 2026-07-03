@@ -179,6 +179,19 @@ test_empty_kimi_failure_reports_actionable_diagnostic() {
     contains "$out" "doctor --probe-runtime"
 }
 
+test_enable_respects_codex_home() {
+  local codex_home out config_path
+  codex_home="$TMP/codex-home"
+  config_path="$codex_home/config.toml"
+  out="$(CODEX_HOME="$codex_home" run_helper enable --json 2>&1)" || {
+    printf '%s\n' "$out"
+    return 1
+  }
+  contains "$out" "\"config\": \"$config_path\"" &&
+    [ -f "$config_path" ] &&
+    contains "$(cat "$config_path")" "[marketplaces.kimi-review-private]"
+}
+
 test_preset_routes_to_security() {
   local repo out
   repo="$(make_repo preset)"
@@ -253,6 +266,7 @@ check "untracked symlink is not followed" test_untracked_symlink_is_not_followed
 check "context budget truncates large prompt" test_context_budget_truncates_large_prompt
 check "timeout reports actionable diagnostic" test_timeout_reports_actionable_diagnostic
 check "empty kimi failure reports actionable diagnostic" test_empty_kimi_failure_reports_actionable_diagnostic
+check "enable respects CODEX_HOME" test_enable_respects_codex_home
 check "preset routes to security review prompt" test_preset_routes_to_security
 check "invalid base ref reports git error" test_invalid_base
 check "background job completes and result is readable" test_background_result
@@ -263,4 +277,4 @@ if [ "$FAILED" -ne 0 ]; then
   exit 1
 fi
 
-printf '14 test(s) passed\n'
+printf '15 test(s) passed\n'
