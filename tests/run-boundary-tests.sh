@@ -20,6 +20,9 @@ cat > "$FAKE_BIN/kimi" <<'EOF'
 if [ -n "$FAKE_KIMI_DELAY_MS" ]; then
   sleep "$(awk "BEGIN { print $FAKE_KIMI_DELAY_MS / 1000 }")"
 fi
+if [ -n "$FAKE_KIMI_EMPTY_FAIL" ]; then
+  exit 1
+fi
 case " $* " in
   *" --version "*) echo "kimi-code fake-0.0.0"; exit 0 ;;
   *" doctor "*) echo "Kimi doctor fake OK"; exit 0 ;;
@@ -165,6 +168,17 @@ test_timeout_reports_actionable_diagnostic() {
     contains "$out" "Kimi review failed"
 }
 
+test_empty_kimi_failure_reports_actionable_diagnostic() {
+  local repo out status
+  repo="$(make_repo empty-failure)"
+  printf 'changed\n' > "$repo/app.txt"
+  out="$(PATH="$FAKE_BIN:$PATH" CODEX_KIMI_REVIEW_JOB_DIR="$JOB_DIR" FAKE_KIMI_EMPTY_FAIL=1 "$NODE_BIN" "$HELPER" review --path "$repo" 2>&1)"
+  status=$?
+  [ "$status" -ne 0 ] &&
+    contains "$out" "Kimi exited with status 1 and produced no output" &&
+    contains "$out" "doctor --probe-runtime"
+}
+
 test_preset_routes_to_security() {
   local repo out
   repo="$(make_repo preset)"
@@ -238,6 +252,7 @@ check "untracked review calls kimi" test_untracked_review_calls_kimi
 check "untracked symlink is not followed" test_untracked_symlink_is_not_followed
 check "context budget truncates large prompt" test_context_budget_truncates_large_prompt
 check "timeout reports actionable diagnostic" test_timeout_reports_actionable_diagnostic
+check "empty kimi failure reports actionable diagnostic" test_empty_kimi_failure_reports_actionable_diagnostic
 check "preset routes to security review prompt" test_preset_routes_to_security
 check "invalid base ref reports git error" test_invalid_base
 check "background job completes and result is readable" test_background_result
@@ -248,4 +263,4 @@ if [ "$FAILED" -ne 0 ]; then
   exit 1
 fi
 
-printf '13 test(s) passed\n'
+printf '14 test(s) passed\n'

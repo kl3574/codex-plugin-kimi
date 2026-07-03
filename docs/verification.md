@@ -34,7 +34,7 @@ codex-plugin-kimi@kimi-review-private` reports a successful install.
 ## 2026-07-03 Local Results
 
 - `npm run check`: passed. Static helper parse, local plugin validation, and
-  10 fake-Kimi boundary tests passed.
+  14 fake-Kimi boundary tests passed.
 - `validate_plugin.py /home/lkx/codex-plugin-kimi`: passed.
 - `setup --json`: passed. `kimi` and `git` were found; `kimi doctor` exited
   successfully with no output.
@@ -60,3 +60,16 @@ codex-plugin-kimi@kimi-review-private` reports a successful install.
   `kimi -p`.
 - Review timeout failures now print `Timed out after <n> ms`, plus exit status
   or signal when available.
+- Empty Kimi prompt-mode failures now print an actionable diagnostic when
+  `kimi -p` exits nonzero without stdout, stderr, or an error object.
+
+## 2026-07-03 Runtime Probe Follow-up
+
+- `npm run check`: passed with 14 boundary tests.
+- `validate_plugin.py /home/lkx/codex-plugin-kimi`: passed.
+- `doctor --json --probe-runtime --timeout-ms 60000`: failed only at the real
+  `kimi -p` runtime probe. Kimi exited with status 1 and produced no output;
+  the helper now reports that exact condition and recommends
+  `codex-kimi-review doctor --probe-runtime` or
+  `kimi -p "Return ok" --output-format text` to check Kimi authentication,
+  provider, and network access.
