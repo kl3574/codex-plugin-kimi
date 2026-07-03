@@ -1,11 +1,36 @@
 ---
-name: status
-description: Show running and recent Codex Plugin Kimi background jobs.
+description: Show running and recent Kimi review jobs for the current workspace.
 ---
 
-Run this Bash command and return the full output:
+# /codex-plugin-kimi:status
 
-```bash
-PLUGIN_ROOT="${KIMI_PLUGIN_ROOT:-${KIMI_CODE_HOME:-$HOME/.kimi-code}/plugins/managed/codex-plugin-kimi}"
-node "$PLUGIN_ROOT/scripts/codex-kimi-review.mjs" status $ARGUMENTS
-```
+## Preflight
+
+1. Prefer the helper binary `codex-kimi-review` if it is available on PATH.
+2. If it is not available, run it from this checkout with
+   `node /home/lkx/codex-plugin-kimi/scripts/codex-kimi-review.mjs`.
+
+## Plan
+
+Run the helper in status mode and return the result.
+
+## Commands
+
+Use the exact argument tail the user supplied after `/codex-plugin-kimi:status`.
+
+- Preferred:
+  `codex-kimi-review status <user-arguments>`
+- Fallback:
+  `node /home/lkx/codex-plugin-kimi/scripts/codex-kimi-review.mjs status <user-arguments>`
+
+Useful flags:
+
+- `--json` - return machine-readable job data.
+
+## Verification
+
+Treat the helper output as the source of truth for job state.
+
+## Summary
+
+Return the helper stdout verbatim.

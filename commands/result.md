@@ -1,11 +1,32 @@
 ---
-name: result
-description: Show the final output for a completed Codex Plugin Kimi background job.
+description: Print the result for a completed Kimi review background job.
 ---
 
-Run this Bash command and return the full output:
+# /codex-plugin-kimi:result
 
-```bash
-PLUGIN_ROOT="${KIMI_PLUGIN_ROOT:-${KIMI_CODE_HOME:-$HOME/.kimi-code}/plugins/managed/codex-plugin-kimi}"
-node "$PLUGIN_ROOT/scripts/codex-kimi-review.mjs" result $ARGUMENTS
-```
+## Preflight
+
+1. Prefer the helper binary `codex-kimi-review` if it is available on PATH.
+2. If it is not available, run it from this checkout with
+   `node /home/lkx/codex-plugin-kimi/scripts/codex-kimi-review.mjs`.
+
+## Plan
+
+Print the captured stdout and stderr for one background job.
+
+## Commands
+
+Use the exact argument tail the user supplied after `/codex-plugin-kimi:result`.
+
+- Preferred:
+  `codex-kimi-review result <job-id> <user-arguments>`
+- Fallback:
+  `node /home/lkx/codex-plugin-kimi/scripts/codex-kimi-review.mjs result <job-id> <user-arguments>`
+
+## Verification
+
+If the helper exits non-zero, report that failure exactly and stop.
+
+## Summary
+
+Return the helper stdout verbatim.

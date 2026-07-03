@@ -1,13 +1,36 @@
 ---
-name: setup
-description: Check Codex CLI installation and authentication.
+description: Check whether Kimi Code CLI and local review helper prerequisites are installed.
 ---
 
-Run this Bash command and return the full output:
+# /codex-plugin-kimi:setup
 
-```bash
-PLUGIN_ROOT="${KIMI_PLUGIN_ROOT:-${KIMI_CODE_HOME:-$HOME/.kimi-code}/plugins/managed/codex-plugin-kimi}"
-node "$PLUGIN_ROOT/scripts/codex-kimi-review.mjs" setup $ARGUMENTS
-```
+## Preflight
 
-Do not modify files.
+1. Prefer the helper binary `codex-kimi-review` if it is available on PATH.
+2. If it is not available, run it from this checkout with
+   `node /home/lkx/codex-plugin-kimi/scripts/codex-kimi-review.mjs`.
+
+## Plan
+
+Run setup diagnostics for the local Codex to Kimi review workflow.
+
+## Commands
+
+Use the exact argument tail the user supplied after `/codex-plugin-kimi:setup`.
+
+- Preferred:
+  `codex-kimi-review setup <user-arguments>`
+- Fallback:
+  `node /home/lkx/codex-plugin-kimi/scripts/codex-kimi-review.mjs setup <user-arguments>`
+
+Useful flags:
+
+- `--json` - return machine-readable diagnostics.
+
+## Verification
+
+If setup exits non-zero, report the failure exactly and stop.
+
+## Summary
+
+Return the helper stdout verbatim.

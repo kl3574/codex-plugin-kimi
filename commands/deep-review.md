@@ -1,13 +1,34 @@
 ---
-name: deep-review
-description: Run a deep Codex review with broad risk analysis.
+description: Run a broad deep Kimi Code review against the current workspace.
 ---
 
-Run this Bash command and return the full output:
+# /codex-plugin-kimi:deep-review
 
-```bash
-PLUGIN_ROOT="${KIMI_PLUGIN_ROOT:-${KIMI_CODE_HOME:-$HOME/.kimi-code}/plugins/managed/codex-plugin-kimi}"
-node "$PLUGIN_ROOT/scripts/codex-kimi-review.mjs" deep-review $ARGUMENTS
-```
+## Preflight
 
-For large diffs, suggest `--background`. Do not modify files or apply fixes from the review command.
+1. Prefer the helper binary `codex-kimi-review` if it is available on PATH.
+2. If it is not available, run it from this checkout with
+   `node /home/lkx/codex-plugin-kimi/scripts/codex-kimi-review.mjs`.
+
+## Plan
+
+Run a broad Kimi review covering architecture, correctness, tests, security,
+maintainability, release safety, and blind spots. The helper keeps the review
+read-only.
+
+## Commands
+
+Use the exact argument tail the user supplied after `/codex-plugin-kimi:deep-review`.
+
+- Preferred:
+  `codex-kimi-review deep-review <user-arguments>`
+- Fallback:
+  `node /home/lkx/codex-plugin-kimi/scripts/codex-kimi-review.mjs deep-review <user-arguments>`
+
+## Verification
+
+If the helper exits non-zero, report that failure exactly and stop.
+
+## Summary
+
+Return the helper stdout verbatim.

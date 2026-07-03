@@ -1,15 +1,39 @@
 ---
-name: doctor
-description: Diagnose Codex Plugin Kimi installation and runtime readiness.
+description: Run local diagnostics for the Codex to Kimi review plugin.
 ---
 
-Run this Bash command and return the full output:
+# /codex-plugin-kimi:doctor
 
-```bash
-PLUGIN_ROOT="${KIMI_PLUGIN_ROOT:-${KIMI_CODE_HOME:-$HOME/.kimi-code}/plugins/managed/codex-plugin-kimi}"
-node "$PLUGIN_ROOT/scripts/codex-kimi-review.mjs" doctor $ARGUMENTS
-```
+## Preflight
 
-Use `$ARGUMENTS` as provided. If the user asks for a real runtime probe, pass `--probe-runtime`; otherwise leave it out to avoid spending model quota.
+1. Prefer the helper binary `codex-kimi-review` if it is available on PATH.
+2. If it is not available, run it from this checkout with
+   `node /home/lkx/codex-plugin-kimi/scripts/codex-kimi-review.mjs`.
 
-Do not modify files.
+## Plan
+
+Run plugin diagnostics, including manifest checks, command and skill directory
+checks, job directory checks, Git availability, and Kimi Code availability.
+
+## Commands
+
+Use the exact argument tail the user supplied after `/codex-plugin-kimi:doctor`.
+
+- Preferred:
+  `codex-kimi-review doctor <user-arguments>`
+- Fallback:
+  `node /home/lkx/codex-plugin-kimi/scripts/codex-kimi-review.mjs doctor <user-arguments>`
+
+Useful flags:
+
+- `--json` - return machine-readable diagnostics.
+- `--probe-runtime` - run a minimal real `kimi -p` prompt.
+- `--timeout-ms <n>` - cap the optional runtime probe.
+
+## Verification
+
+If doctor exits non-zero, report the failure exactly and stop.
+
+## Summary
+
+Return the helper stdout verbatim.

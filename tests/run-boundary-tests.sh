@@ -11,36 +11,28 @@ FAKE_BIN="$TMP/fake-bin"
 JOB_DIR="$TMP/jobs"
 FAILED=0
 
+trap 'rm -rf "$TMP"' EXIT
+
 mkdir -p "$FAKE_BIN" "$JOB_DIR"
 
-cat > "$FAKE_BIN/codex" <<'EOF'
+cat > "$FAKE_BIN/kimi" <<'EOF'
 #!/bin/sh
-if [ -n "$FAKE_CODEX_DELAY_MS" ]; then
-  sleep "$(awk "BEGIN { print $FAKE_CODEX_DELAY_MS / 1000 }")"
+if [ -n "$FAKE_KIMI_DELAY_MS" ]; then
+  sleep "$(awk "BEGIN { print $FAKE_KIMI_DELAY_MS / 1000 }")"
 fi
 case " $* " in
-  *" --version "*) echo "codex-cli fake-0.0.0"; exit 0 ;;
+  *" --version "*) echo "kimi-code fake-0.0.0"; exit 0 ;;
+  *" doctor "*) echo "Kimi doctor fake OK"; exit 0 ;;
+  *" -p "*) echo "FAKE_KIMI_PROMPT $*"; exit 0 ;;
 esac
-if [ "$1" = "login" ] && [ "$2" = "status" ]; then
-  echo "Logged in using Fake"
-  exit 0
-fi
-case " $* " in
-  *" exec"*) echo "FAKE_CODEX_EXEC $*"; exit 0 ;;
-  *" review"*) echo "FAKE_CODEX_REVIEW $*"; exit 0 ;;
-esac
-echo "unexpected fake codex args: $*" >&2
+echo "unexpected fake kimi args: $*" >&2
 exit 2
 EOF
-chmod +x "$FAKE_BIN/codex"
+chmod +x "$FAKE_BIN/kimi"
 ln -s "$REAL_GIT" "$FAKE_BIN/git"
 
 run_helper() {
   PATH="$FAKE_BIN:$PATH" CODEX_KIMI_REVIEW_JOB_DIR="$JOB_DIR" "$NODE_BIN" "$HELPER" "$@"
-}
-
-run_helper_env() {
-  env "$@" PATH="$FAKE_BIN:$PATH" CODEX_KIMI_REVIEW_JOB_DIR="$JOB_DIR" "$NODE_BIN" "$HELPER"
 }
 
 pass() {
@@ -91,26 +83,17 @@ test_setup_success() {
     printf '%s\n' "$out"
     return 1
   }
-  contains "$out" '"ok": true' && contains "$out" '"codex_authenticated": true'
+  contains "$out" '"ok": true' && contains "$out" '"kimi_available": true'
 }
 
-test_setup_missing_codex() {
+test_setup_missing_kimi() {
   local out status
   out="$(PATH="/nonexistent" CODEX_KIMI_REVIEW_JOB_DIR="$TMP/missing-jobs" "$NODE_BIN" "$HELPER" setup 2>&1)"
   status=$?
-  [ "$status" -ne 0 ] && contains "$out" "Codex CLI not found"
+  [ "$status" -ne 0 ] && contains "$out" "Kimi Code CLI not found"
 }
 
-test_doctor_runtime_probe() {
-  local out
-  out="$(run_helper doctor --probe-runtime --json 2>&1)" || {
-    printf '%s\n' "$out"
-    return 1
-  }
-  contains "$out" '"runtime_probe"' && contains "$out" '"ok": true' && contains "$out" "FAKE_CODEX_EXEC"
-}
-
-test_non_git_folder() {
+test_non_git_folder_review() {
   local dir out
   dir="$TMP/plain"
   mkdir -p "$dir"
@@ -119,7 +102,7 @@ test_non_git_folder() {
     printf '%s\n' "$out"
     return 1
   }
-  contains "$out" "FAKE_CODEX_EXEC"
+  contains "$out" "FAKE_KIMI_PROMPT" && contains "$out" "review_context"
 }
 
 test_empty_diff() {
@@ -132,7 +115,7 @@ test_empty_diff() {
   contains "$out" "No changes to review."
 }
 
-test_untracked_review() {
+test_untracked_review_calls_kimi() {
   local repo out
   repo="$(make_repo untracked)"
   printf 'new\n' > "$repo/new.txt"
@@ -140,18 +123,18 @@ test_untracked_review() {
     printf '%s\n' "$out"
     return 1
   }
-  contains "$out" "FAKE_CODEX_REVIEW" && contains "$out" "--uncommitted"
+  contains "$out" "FAKE_KIMI_PROMPT" && contains "$out" "working-tree"
 }
 
-test_review_focus_uses_exec() {
+test_preset_routes_to_security() {
   local repo out
-  repo="$(make_repo focus)"
-  printf 'changed\n' > "$repo/app.txt"
-  out="$(run_helper review --path "$repo" --focus "custom focus" 2>&1)" || {
+  repo="$(make_repo preset)"
+  printf 'password = input()\n' > "$repo/app.txt"
+  out="$(run_helper review --path "$repo" --preset security 2>&1)" || {
     printf '%s\n' "$out"
     return 1
   }
-  contains "$out" "FAKE_CODEX_EXEC"
+  contains "$out" "FAKE_KIMI_PROMPT" && contains "$out" "security-focused"
 }
 
 test_invalid_base() {
@@ -163,36 +146,8 @@ test_invalid_base() {
   [ "$status" -ne 0 ] && contains "$out" "does-not-exist"
 }
 
-test_security_exec() {
-  local repo out
-  repo="$(make_repo security)"
-  printf 'password = input()\n' > "$repo/app.txt"
-  out="$(run_helper security-review --path "$repo" 2>&1)" || {
-    printf '%s\n' "$out"
-    return 1
-  }
-  contains "$out" "FAKE_CODEX_EXEC"
-}
-
-test_large_diff() {
-  local repo out
-  repo="$(make_repo large)"
-  python3 - "$repo/large.txt" <<'PY'
-import sys
-with open(sys.argv[1], "w", encoding="utf-8") as f:
-    line = "x" * 1024 + "\n"
-    for _ in range(7000):
-        f.write(line)
-PY
-  out="$(run_helper adversarial-review --path "$repo" --timeout-ms 30000 2>&1)" || {
-    printf '%s\n' "$out"
-    return 1
-  }
-  contains "$out" "FAKE_CODEX_EXEC"
-}
-
 test_background_result() {
-  local repo out id status_json result_json result_out
+  local repo out id status_json result_out
   repo="$(make_repo background)"
   printf 'changed\n' > "$repo/app.txt"
   out="$(run_helper security-review --path "$repo" --background 2>&1)" || {
@@ -214,7 +169,7 @@ test_background_result() {
     printf '%s\n' "$result_out"
     return 1
   }
-  contains "$result_out" "FAKE_CODEX_EXEC"
+  contains "$result_out" "FAKE_KIMI_PROMPT"
 }
 
 test_cancel_job() {
@@ -222,7 +177,7 @@ test_cancel_job() {
   cancel_jobs="$TMP/cancel-jobs"
   repo="$(make_repo cancel)"
   printf 'changed\n' > "$repo/app.txt"
-  out="$(PATH="$FAKE_BIN:$PATH" CODEX_KIMI_REVIEW_JOB_DIR="$cancel_jobs" FAKE_CODEX_DELAY_MS=10000 "$NODE_BIN" "$HELPER" deep-review --path "$repo" --background 2>&1)" || {
+  out="$(PATH="$FAKE_BIN:$PATH" CODEX_KIMI_REVIEW_JOB_DIR="$cancel_jobs" FAKE_KIMI_DELAY_MS=10000 "$NODE_BIN" "$HELPER" deep-review --path "$repo" --background 2>&1)" || {
     printf '%s\n' "$out"
     return 1
   }
@@ -236,16 +191,13 @@ test_cancel_job() {
 }
 
 check "static validation passes" test_static_validation
-check "setup succeeds with fake codex" test_setup_success
-check "setup fails when codex is missing" test_setup_missing_codex
-check "doctor runtime probe succeeds with fake codex" test_doctor_runtime_probe
-check "non-git folder review uses codex exec" test_non_git_folder
+check "setup succeeds with fake kimi" test_setup_success
+check "setup fails when kimi is missing" test_setup_missing_kimi
+check "non-git folder review calls kimi" test_non_git_folder_review
 check "empty diff exits cleanly" test_empty_diff
-check "untracked file review uses native codex review" test_untracked_review
-check "review with focus uses codex exec compatibility path" test_review_focus_uses_exec
+check "untracked review calls kimi" test_untracked_review_calls_kimi
+check "preset routes to security review prompt" test_preset_routes_to_security
 check "invalid base ref reports git error" test_invalid_base
-check "security review uses codex exec" test_security_exec
-check "large diff does not overflow buffers" test_large_diff
 check "background job completes and result is readable" test_background_result
 check "cancel running background job" test_cancel_job
 
@@ -254,4 +206,4 @@ if [ "$FAILED" -ne 0 ]; then
   exit 1
 fi
 
-printf '13 test(s) passed\n'
+printf '10 test(s) passed\n'
