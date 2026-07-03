@@ -487,6 +487,15 @@ async function runKimi(kind, options, context) {
   return runAsync("kimi", args, { cwd: context.cwd, timeoutMs: timeoutFrom(options) });
 }
 
+function emptyKimiFailureDiagnostic(result) {
+  if (result.timedOut || result.status === 0) return null;
+  const stdout = String(result.stdout ?? "").trim();
+  const stderr = String(result.stderr ?? "").trim();
+  if (stdout || stderr || result.error) return null;
+  const statusText = result.status == null ? "without an exit status" : `with status ${result.status}`;
+  return `Kimi exited ${statusText} and produced no output. Run \`codex-kimi-review doctor --probe-runtime\` or \`kimi -p "Return ok" --output-format text\` to check Kimi authentication, provider, and network access.`;
+}
+
 function resolveJobsDir(cwd, options = {}) {
   const candidates = [
     options["job-dir"],
@@ -572,7 +581,8 @@ async function executeReview(kind, options) {
     timeoutMs: result.timeoutMs ?? timeoutFrom(options),
     stdout: result.stdout ?? "",
     stderr: result.stderr ?? "",
-    error: result.error ? result.error.message : null
+    error: result.error ? result.error.message : null,
+    diagnostic: emptyKimiFailureDiagnostic(result)
   };
 }
 
@@ -621,7 +631,8 @@ function kimiRuntimeProbe(options = {}) {
     signal: result.signal ?? null,
     stdout: (result.stdout ?? "").trim(),
     stderr: (result.stderr ?? "").trim(),
-    error: result.error ? result.error.message : null
+    error: result.error ? result.error.message : null,
+    diagnostic: emptyKimiFailureDiagnostic(result)
   };
 }
 
@@ -785,6 +796,7 @@ async function handleReviewLike(kind, argv) {
     if (result.signal) console.error(`Signal: ${result.signal}`);
     if (result.error) console.error(result.error);
     if (result.stderr) console.error(result.stderr.trim());
+    if (result.diagnostic) console.error(result.diagnostic);
     process.exitCode = result.status && result.status > 0 ? result.status : 1;
     return;
   }
@@ -834,6 +846,7 @@ function renderJob(job) {
     job.pid ? `PID: ${job.pid}` : null
   ].filter(Boolean);
   if (job.error) lines.push("", "Error:", job.error);
+  if (job.result?.diagnostic) lines.push("", "Diagnostic:", job.result.diagnostic);
   if (job.result?.stderr) lines.push("", "stderr:", job.result.stderr.trim());
   return `${lines.join("\n")}\n`;
 }
