@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const manifestPath = path.join(root, ".codex-plugin", "plugin.json");
+const marketplaceName = "kimi-review";
 const errors = [];
 
 function exists(rel) {
@@ -34,7 +35,7 @@ if (manifest) {
 try {
   const marketplace = JSON.parse(fs.readFileSync(path.join(root, ".agents", "plugins", "marketplace.json"), "utf8"));
   const plugin = marketplace.plugins?.find((item) => item.name === "codex-plugin-kimi");
-  if (marketplace.name !== "kimi-review-private") errors.push("marketplace name must be kimi-review-private");
+  if (marketplace.name !== marketplaceName) errors.push(`marketplace name must be ${marketplaceName}`);
   if (!plugin) errors.push("marketplace must list codex-plugin-kimi");
   if (plugin?.source?.source !== "local" || plugin?.source?.path !== "./") errors.push("marketplace source must be local ./");
 } catch (error) {

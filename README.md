@@ -19,6 +19,11 @@ It is not a Kimi Code plugin that calls Codex.
 - Kimi Code CLI available as `kimi`.
 - A working Kimi Code login/auth setup for real runtime reviews.
 
+When the local network requires `HTTP_PROXY` or `HTTPS_PROXY`, the helper
+defaults Kimi child processes to `NODE_USE_ENV_PROXY=1` so the Node-bundled
+Kimi runtime honors those proxy variables. Set `NODE_USE_ENV_PROXY=0` before
+running the helper only if you explicitly need to disable that behavior.
+
 ## Commands
 
 The plugin provides these slash-command prompt files under `commands/`:
@@ -61,7 +66,22 @@ node scripts/codex-kimi-review.mjs status
 node scripts/codex-kimi-review.mjs result <job-id>
 ```
 
-## Enable in Codex
+## Install in Codex from GitHub
+
+After this repository is public, add it as a Codex marketplace source and
+install the plugin:
+
+```bash
+codex plugin marketplace add kl3574/codex-plugin-kimi
+codex plugin add codex-plugin-kimi@kimi-review
+codex plugin list
+```
+
+You can also browse it from Codex with `/plugins` after adding the marketplace.
+Start a new Codex thread after installation so the bundled skills and commands
+are loaded.
+
+## Enable a Local Checkout
 
 From this checkout:
 
@@ -72,11 +92,11 @@ node scripts/codex-kimi-review.mjs enable
 The helper adds a local marketplace entry to `~/.codex/config.toml`:
 
 ```toml
-[marketplaces.kimi-review-private]
+[marketplaces.kimi-review]
 source_type = "local"
 source = "/home/lkx/codex-plugin-kimi"
 
-[plugins."codex-plugin-kimi@kimi-review-private"]
+[plugins."codex-plugin-kimi@kimi-review"]
 enabled = true
 ```
 
@@ -88,20 +108,17 @@ checkout can be used directly as a local Codex marketplace source.
 After the marketplace is registered, install the plugin from that marketplace:
 
 ```bash
-codex plugin add codex-plugin-kimi@kimi-review-private
+codex plugin add codex-plugin-kimi@kimi-review
 codex plugin list
 ```
 
 ## Install on Another Machine
 
-After the GitHub repository is public, install it on another computer with:
+Install it on another computer with:
 
 ```bash
-git clone https://github.com/kl3574/codex-plugin-kimi.git
-cd codex-plugin-kimi
-node scripts/codex-kimi-review.mjs setup
-node scripts/codex-kimi-review.mjs enable
-codex plugin add codex-plugin-kimi@kimi-review-private
+codex plugin marketplace add kl3574/codex-plugin-kimi
+codex plugin add codex-plugin-kimi@kimi-review
 codex plugin list
 ```
 

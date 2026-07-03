@@ -29,7 +29,7 @@ the plugin can still be validated with a temporary `CODEX_HOME`.
 
 Codex marketplace registration and plugin installation are separate steps. The
 plugin is only fully active after `codex plugin add
-codex-plugin-kimi@kimi-review-private` reports a successful install.
+codex-plugin-kimi@kimi-review` reports a successful install.
 
 ## 2026-07-03 Local Results
 
@@ -45,10 +45,7 @@ codex-plugin-kimi@kimi-review-private` reports a successful install.
 - `enable --json` against `/home/lkx/.codex/config.toml`: failed because the
   managed sandbox exposed that file as read-only (`EROFS`). The helper returned
   the exact TOML `config_block` for manual use.
-- Temporary Codex install check:
-  `CODEX_HOME=/tmp/codex-kimi-codex-home codex plugin add codex-plugin-kimi@kimi-review-private --json`
-  returned version `0.1.0`, and `codex plugin list` then reported
-  `codex-plugin-kimi@kimi-review-private` as `installed, enabled`.
+- Temporary Codex install check used the earlier private marketplace name.
 
 ## 2026-07-03 Review Fixes
 
@@ -76,3 +73,21 @@ codex-plugin-kimi@kimi-review-private` reports a successful install.
   `codex-kimi-review doctor --probe-runtime` or
   `kimi -p "Return ok" --output-format text` to check Kimi authentication,
   provider, and network access.
+
+## 2026-07-03 Public Install Release
+
+- Bumped plugin and package version to `0.1.1`.
+- Renamed the public marketplace from `kimi-review-private` to `kimi-review`.
+- Documented GitHub marketplace installation:
+  `codex plugin marketplace add kl3574/codex-plugin-kimi`, then
+  `codex plugin add codex-plugin-kimi@kimi-review`.
+- Kimi child processes now default to `NODE_USE_ENV_PROXY=1`, while preserving
+  an explicit user override such as `NODE_USE_ENV_PROXY=0`.
+- `npm run check`: passed. Static helper parse, local plugin validation, and
+  17 fake-Kimi boundary tests passed.
+- `validate_plugin.py /home/lkx/codex-plugin-kimi`: passed.
+- Temporary Codex install check:
+  `CODEX_HOME=/tmp/codex-plugin-kimi-install-check codex plugin marketplace add /home/lkx/codex-plugin-kimi`,
+  then `codex plugin add codex-plugin-kimi@kimi-review --json`, returned
+  version `0.1.1`; `codex plugin list` reported
+  `codex-plugin-kimi@kimi-review` as `installed, enabled`.

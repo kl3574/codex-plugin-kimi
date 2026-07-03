@@ -12,6 +12,8 @@ const SCRIPT_PATH = fileURLToPath(import.meta.url);
 const ROOT_DIR = path.resolve(path.dirname(SCRIPT_PATH), "..");
 const PACKAGE_JSON = path.join(ROOT_DIR, "package.json");
 const JOB_ENV = "CODEX_KIMI_REVIEW_JOB_DIR";
+const PLUGIN_NAME = "codex-plugin-kimi";
+const MARKETPLACE_NAME = "kimi-review";
 const DEFAULT_TIMEOUT_MS = 30 * 60 * 1000;
 const MAX_BUFFER = 128 * 1024 * 1024;
 const MAX_FILE_BYTES = 1024 * 1024;
@@ -175,19 +177,33 @@ function runSync(command, args, opts = {}) {
   });
 }
 
+function kimiEnv(env = process.env) {
+  return {
+    ...env,
+    NODE_USE_ENV_PROXY: env.NODE_USE_ENV_PROXY ?? "1"
+  };
+}
+
+function runKimiSync(args, opts = {}) {
+  return runSync("kimi", args, {
+    ...opts,
+    env: kimiEnv(opts.env ?? process.env)
+  });
+}
+
 function commandAvailable(command) {
   const result = runSync(process.platform === "win32" ? "where" : "which", [command]);
   return result.status === 0 && result.stdout.trim().length > 0;
 }
 
 function kimiVersion() {
-  const result = runSync("kimi", ["--version"]);
+  const result = runKimiSync(["--version"]);
   if (result.status !== 0) return null;
   return result.stdout.trim();
 }
 
 function kimiDoctor() {
-  const result = runSync("kimi", ["doctor"]);
+  const result = runKimiSync(["doctor"]);
   const output = `${result.stdout ?? ""}${result.stderr ?? ""}`.trim();
   return {
     ok: result.status === 0,
@@ -484,7 +500,11 @@ async function runKimi(kind, options, context) {
   const args = [];
   if (options.model) args.push("-m", options.model);
   args.push("-p", prompt, "--output-format", "text");
-  return runAsync("kimi", args, { cwd: context.cwd, timeoutMs: timeoutFrom(options) });
+  return runAsync("kimi", args, {
+    cwd: context.cwd,
+    env: kimiEnv(),
+    timeoutMs: timeoutFrom(options)
+  });
 }
 
 function emptyKimiFailureDiagnostic(result) {
@@ -619,7 +639,7 @@ function printSetup(payload, json) {
 
 function kimiRuntimeProbe(options = {}) {
   const args = ["-p", "Return exactly: codex-plugin-kimi-runtime-ok", "--output-format", "text"];
-  const result = runSync("kimi", args, {
+  const result = runKimiSync(args, {
     cwd: process.cwd(),
     timeoutMs: timeoutFrom(options, 60_000)
   });
@@ -689,20 +709,20 @@ function handleDoctor(argv) {
 
 function enablePayload(options) {
   const configPath = codexConfigPath(options);
-  const marketplaceName = "kimi-review-private";
-  const pluginKey = `codex-plugin-kimi@${marketplaceName}`;
+  const marketplaceName = MARKETPLACE_NAME;
+  const pluginKey = `${PLUGIN_NAME}@${marketplaceName}`;
   const block = [
     "",
-    "[marketplaces.kimi-review-private]",
+    `[marketplaces.${marketplaceName}]`,
     'source_type = "local"',
     `source = "${ROOT_DIR.replaceAll("\\", "\\\\").replaceAll('"', '\\"')}"`,
     "",
-    '[plugins."codex-plugin-kimi@kimi-review-private"]',
+    `[plugins."${pluginKey}"]`,
     "enabled = true",
     ""
   ].join("\n");
   const existing = fs.existsSync(configPath) ? fs.readFileSync(configPath, "utf8") : "";
-  const already = existing.includes("[marketplaces.kimi-review-private]") && existing.includes('[plugins."codex-plugin-kimi@kimi-review-private"]');
+  const already = existing.includes(`[marketplaces.${marketplaceName}]`) && existing.includes(`[plugins."${pluginKey}"]`);
   return { configPath, marketplaceName, pluginKey, already, block };
 }
 
@@ -732,8 +752,8 @@ function handleEnable(argv) {
     config_block: payload.block.trim(),
     error: writeError ? writeError.message : null,
     next_step: writeError
-      ? "Add config_block to Codex config, then run: codex plugin add codex-plugin-kimi@kimi-review-private"
-      : "Run: codex plugin add codex-plugin-kimi@kimi-review-private, then restart Codex or start a new Codex thread."
+      ? `Add config_block to Codex config, then run: codex plugin add ${payload.pluginKey}`
+      : `Run: codex plugin add ${payload.pluginKey}, then restart Codex or start a new Codex thread.`
   };
   if (options.json) console.log(JSON.stringify(result, null, 2));
   else {

@@ -1,7 +1,7 @@
 {
-  "name": "kimi-review-private",
+  "name": "kimi-review",
   "interface": {
-    "displayName": "Kimi Review Private"
+    "displayName": "Kimi Review"
   },
   "plugins": [
     {

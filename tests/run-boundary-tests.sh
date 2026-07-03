@@ -17,6 +17,10 @@ mkdir -p "$FAKE_BIN" "$JOB_DIR"
 
 cat > "$FAKE_BIN/kimi" <<'EOF'
 #!/bin/sh
+if [ -n "${EXPECT_NODE_USE_ENV_PROXY:-}" ] && [ "${NODE_USE_ENV_PROXY:-}" != "$EXPECT_NODE_USE_ENV_PROXY" ]; then
+  echo "NODE_USE_ENV_PROXY expected '$EXPECT_NODE_USE_ENV_PROXY' but got '${NODE_USE_ENV_PROXY:-}'" >&2
+  exit 9
+fi
 if [ -n "$FAKE_KIMI_DELAY_MS" ]; then
   sleep "$(awk "BEGIN { print $FAKE_KIMI_DELAY_MS / 1000 }")"
 fi
@@ -94,6 +98,24 @@ test_setup_missing_kimi() {
   out="$(PATH="/nonexistent" CODEX_KIMI_REVIEW_JOB_DIR="$TMP/missing-jobs" "$NODE_BIN" "$HELPER" setup 2>&1)"
   status=$?
   [ "$status" -ne 0 ] && contains "$out" "Kimi Code CLI not found"
+}
+
+test_kimi_defaults_node_env_proxy() {
+  local out
+  out="$(env -u NODE_USE_ENV_PROXY PATH="$FAKE_BIN:$PATH" CODEX_KIMI_REVIEW_JOB_DIR="$JOB_DIR" EXPECT_NODE_USE_ENV_PROXY=1 "$NODE_BIN" "$HELPER" setup --json 2>&1)" || {
+    printf '%s\n' "$out"
+    return 1
+  }
+  contains "$out" '"ok": true'
+}
+
+test_kimi_preserves_node_env_proxy_override() {
+  local out
+  out="$(PATH="$FAKE_BIN:$PATH" CODEX_KIMI_REVIEW_JOB_DIR="$JOB_DIR" EXPECT_NODE_USE_ENV_PROXY=0 NODE_USE_ENV_PROXY=0 "$NODE_BIN" "$HELPER" setup --json 2>&1)" || {
+    printf '%s\n' "$out"
+    return 1
+  }
+  contains "$out" '"ok": true'
 }
 
 test_non_git_folder_review() {
@@ -189,7 +211,9 @@ test_enable_respects_codex_home() {
   }
   contains "$out" "\"config\": \"$config_path\"" &&
     [ -f "$config_path" ] &&
-    contains "$(cat "$config_path")" "[marketplaces.kimi-review-private]"
+    contains "$(cat "$config_path")" "[marketplaces.kimi-review]" &&
+    contains "$out" "codex-plugin-kimi@kimi-review" &&
+    ! contains "$out" "undefined"
 }
 
 test_preset_routes_to_security() {
@@ -259,6 +283,8 @@ test_cancel_job() {
 check "static validation passes" test_static_validation
 check "setup succeeds with fake kimi" test_setup_success
 check "setup fails when kimi is missing" test_setup_missing_kimi
+check "kimi child defaults NODE_USE_ENV_PROXY" test_kimi_defaults_node_env_proxy
+check "kimi child preserves NODE_USE_ENV_PROXY override" test_kimi_preserves_node_env_proxy_override
 check "non-git folder review calls kimi" test_non_git_folder_review
 check "empty diff exits cleanly" test_empty_diff
 check "untracked review calls kimi" test_untracked_review_calls_kimi
@@ -277,4 +303,4 @@ if [ "$FAILED" -ne 0 ]; then
   exit 1
 fi
 
-printf '15 test(s) passed\n'
+printf '17 test(s) passed\n'
