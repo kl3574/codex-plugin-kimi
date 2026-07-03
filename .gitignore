@@ -1,8 +1,6 @@
 node_modules/
+.test-tmp-*/
 .codex-kimi/
 *.log
+dist/
 coverage/
-.test-tmp-*/
-.debug-node-*/
-.debug-node2-*/
-.live-review-*/

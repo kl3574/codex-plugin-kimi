@@ -1,8 +1,8 @@
 {
   "name": "codex-plugin-kimi",
-  "version": "0.2.0",
+  "version": "0.1.0",
   "type": "module",
-  "description": "Kimi Code plugin that delegates review workflows to OpenAI Codex CLI.",
+  "description": "Codex plugin that delegates read-only review workflows to Kimi Code CLI.",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
@@ -13,7 +13,7 @@
   },
   "scripts": {
     "test": "bash tests/run-boundary-tests.sh",
-    "check": "node scripts/validate-plugin.mjs && bash tests/run-boundary-tests.sh"
+    "check": "node --check scripts/codex-kimi-review.mjs && node scripts/validate-plugin.mjs && bash tests/run-boundary-tests.sh"
   },
   "bin": {
     "codex-kimi-review": "scripts/codex-kimi-review.mjs"

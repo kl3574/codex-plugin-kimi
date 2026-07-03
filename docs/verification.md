@@ -1,85 +1,47 @@
-# Verification
+# Verification Notes
 
-This file records repeatable verification commands and the expected coverage.
+This file records local verification for the active Codex to Kimi implementation.
 
-## Local Static Checks
+## Expected Checks
 
 ```bash
-node scripts/validate-plugin.mjs
 node --check scripts/codex-kimi-review.mjs
-node --check scripts/validate-plugin.mjs
-```
-
-Expected:
-
-- Manifest JSON parses.
-- `skills` and `commands` paths exist.
-- All command files exist.
-- Core skills exist.
-- Helper scripts pass Node syntax checks.
-
-## Boundary Test Harness
-
-```bash
-npm test
-```
-
-The test harness uses temporary Git repositories and a fake `codex` executable to exercise deterministic boundary behavior without spending model quota on every run.
-
-Covered cases:
-
-- setup success with fake Codex.
-- setup failure when Codex is missing.
-- doctor runtime probe with fake Codex.
-- non-git folder review.
-- empty Git diff.
-- untracked file review.
-- focused review using `codex exec` compatibility path.
-- invalid base ref.
-- security/custom lane through `codex exec`.
-- large diff handling.
-- background job creation, status, result.
-- cancellation path for a long-running fake Codex job.
-
-Current result on 2026-07-03:
-
-```text
+node scripts/validate-plugin.mjs
+bash tests/run-boundary-tests.sh
 npm run check
-13 test(s) passed
+python3 /home/lkx/.codex/skills/.system/plugin-creator/scripts/validate_plugin.py /home/lkx/codex-plugin-kimi
+node scripts/codex-kimi-review.mjs setup --json
+node scripts/codex-kimi-review.mjs doctor --json
+node scripts/codex-kimi-review.mjs doctor --probe-runtime --timeout-ms 10000 --json
+CODEX_HOME=/tmp/codex-kimi-codex-home codex plugin list
 ```
 
-## Live Checks
+## Runtime Caveat
 
-Run after deterministic tests:
+The fake-Kimi boundary suite verifies local helper behavior without requiring
+network access. Real `kimi -p` probes depend on the local Kimi Code auth state
+and outbound network access. If OAuth token fetch fails, the helper should
+surface that failure directly through `setup` or `doctor --probe-runtime`.
 
-```bash
-node scripts/codex-kimi-review.mjs setup
-node scripts/codex-kimi-review.mjs doctor
-node scripts/codex-kimi-review.mjs doctor --probe-runtime --timeout-ms 10000
-```
+The current managed Codex sandbox may make `/home/lkx/.codex/config.toml`
+read-only. In that case, `enable` should print the exact TOML block to add and
+the plugin can still be validated with a temporary `CODEX_HOME`.
 
-Current local results on 2026-07-03:
+## 2026-07-03 Local Results
 
-- `setup --json`: passed. Codex CLI `0.142.5`, authenticated with ChatGPT, Git `2.53.0`, Node `v22.22.1`.
-- `doctor --json`: passed. Manifest, commands, skills, job directory, Git and non-Git readiness are present.
-- `kimi doctor`: passed for `/home/lkx/.kimi-code/config.toml` and `/home/lkx/.kimi-code/tui.toml`.
-- `doctor --probe-runtime --timeout-ms 10000`: failed in this Codex-managed shell with `failed to initialize in-process app-server client: Read-only file system (os error 30)`.
-
-The runtime-probe failure is specific to launching a nested Codex runtime from the current restricted Codex session. It is surfaced by `doctor --probe-runtime` so the plugin does not silently report live-runtime readiness when the host shell cannot start Codex.
-
-Optional quota-consuming smoke test outside this restricted Codex session:
-
-```bash
-tmp=$(mktemp -d)
-git -C "$tmp" init
-git -C "$tmp" config user.email test@example.com
-git -C "$tmp" config user.name Test
-printf 'ok\n' > "$tmp/app.txt"
-git -C "$tmp" add app.txt
-git -C "$tmp" commit -m init
-printf 'ok\nbug\n' > "$tmp/app.txt"
-node scripts/codex-kimi-review.mjs doctor --probe-runtime
-node scripts/codex-kimi-review.mjs review --path "$tmp"
-```
-
-The smoke test invokes real Codex review paths; run it only when authenticated Codex access and model quota are available.
+- `npm run check`: passed. Static helper parse, local plugin validation, and
+  10 fake-Kimi boundary tests passed.
+- `validate_plugin.py /home/lkx/codex-plugin-kimi`: passed.
+- `setup --json`: passed. `kimi` and `git` were found; `kimi doctor` exited
+  successfully with no output.
+- `doctor --json`: passed. Manifest, command directory, skill directory, job
+  directory, Git, and non-Git folder support were all reported available.
+- `doctor --probe-runtime --timeout-ms 10000 --json`: failed only at the real
+  Kimi runtime probe with `spawnSync kimi ETIMEDOUT`.
+- `enable --json` against `/home/lkx/.codex/config.toml`: failed because the
+  managed sandbox exposed that file as read-only (`EROFS`). The helper returned
+  the exact TOML `config_block` for manual use.
+- Temporary Codex install check:
+  `CODEX_HOME=/tmp/codex-kimi-codex-home codex plugin add codex-plugin-kimi@kimi-review-private --json`
+  returned version `0.1.0`, and `codex plugin list` then reported
+  `codex-plugin-kimi@kimi-review-private` as `installed, enabled`.

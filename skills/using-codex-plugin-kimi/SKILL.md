@@ -1,31 +1,31 @@
 ---
 name: using-codex-plugin-kimi
-description: Session-start guidance for the Codex Plugin Kimi review workflows.
+description: Use when configuring, diagnosing, or explaining the codex-plugin-kimi Codex-to-Kimi review plugin.
 ---
 
 # Using Codex Plugin Kimi
 
-This plugin lets Kimi Code call the local OpenAI Codex CLI for read-only review workflows.
+Use this skill when the user asks to run, configure, diagnose, or explain
+`codex-plugin-kimi`.
 
-Use the helper script for all plugin actions:
+## Workflow
+
+1. Confirm the active plugin root is `/home/lkx/codex-plugin-kimi` unless the
+   user names another path.
+2. Use `codex-kimi-review setup` for installation checks.
+3. Use `codex-kimi-review doctor` for plugin health checks.
+4. Use `codex-kimi-review review` or a named review lane for read-only review.
+5. Never modify repository files as part of a Kimi review command.
+
+## Helper Fallback
+
+If `codex-kimi-review` is not on PATH, run:
 
 ```bash
-PLUGIN_ROOT="${KIMI_PLUGIN_ROOT:-${KIMI_CODE_HOME:-$HOME/.kimi-code}/plugins/managed/codex-plugin-kimi}"
-node "$PLUGIN_ROOT/scripts/codex-kimi-review.mjs" <command> [args]
+node /home/lkx/codex-plugin-kimi/scripts/codex-kimi-review.mjs <command>
 ```
 
-Available commands:
+## Notes
 
-- `setup`
-- `doctor`
-- `review`
-- `adversarial-review`
-- `elite-review`
-- `deep-review`
-- `security-review`
-- `folder`
-- `status`
-- `result`
-- `cancel`
-
-Review commands are read-only by default. They must not apply fixes. If the user wants fixes, treat that as a separate follow-up task after reporting Codex findings.
+This plugin direction is Codex to Kimi Code. It is not a Kimi Code plugin that
+calls Codex.

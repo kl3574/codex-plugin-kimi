@@ -1,0 +1,38 @@
+{
+  "name": "codex-plugin-kimi",
+  "version": "0.1.0",
+  "description": "Run Kimi Code review workflows from inside Codex CLI sessions.",
+  "author": {
+    "name": "Kangxin Liu"
+  },
+  "homepage": "https://github.com/kl3574/codex-plugin-kimi",
+  "repository": "https://github.com/kl3574/codex-plugin-kimi",
+  "license": "Apache-2.0",
+  "keywords": [
+    "codex",
+    "kimi-code",
+    "review",
+    "adversarial-review",
+    "security-review"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Codex Plugin Kimi",
+    "shortDescription": "Kimi Code review from inside Codex.",
+    "longDescription": "Use Kimi Code as an external read-only reviewer from Codex. Provides setup checks, quick review, adversarial review, elite/deep/security review prompts, folder review, and background job management.",
+    "developerName": "Kangxin Liu",
+    "category": "Coding",
+    "capabilities": [
+      "Interactive",
+      "Read"
+    ],
+    "websiteURL": "https://github.com/kl3574/codex-plugin-kimi",
+    "defaultPrompt": [
+      "Review the current Codex-generated changes with Kimi Code.",
+      "Run a security-focused Kimi review on the current diff.",
+      "Run a deep adversarial Kimi review in the background."
+    ],
+    "brandColor": "#111827",
+    "screenshots": []
+  }
+}

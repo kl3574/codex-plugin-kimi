@@ -1,115 +1,110 @@
-# Codex Plugin Kimi
+# codex-plugin-kimi
 
-Kimi Code plugin for running OpenAI Codex CLI review workflows from inside Kimi Code.
+`codex-plugin-kimi` is a Codex plugin that lets Codex call Kimi Code CLI for
+read-only review workflows. It mirrors the practical workflow shape of
+`codex-plugin-cc`, but the reviewer runtime is Kimi Code.
 
-This is the Kimi-side mirror of the `codex-plugin-cc` workflow family: where `codex-plugin-cc` lets Codex call Claude Code, this plugin lets Kimi Code call Codex.
+Direction:
+
+```text
+Codex -> codex-kimi-review helper -> kimi -p -> Kimi Code review output
+```
+
+It is not a Kimi Code plugin that calls Codex.
 
 ## Requirements
 
-- Kimi Code CLI.
 - Node.js 18.18 or newer.
-- Git on `PATH`.
-- OpenAI Codex CLI on `PATH`.
-- Codex CLI authenticated locally with `codex login`.
-
-## Install
-
-From local checkout:
-
-```text
-/plugins install /home/lkx/codex-plugin-kimi
-/reload
-```
-
-From GitHub after sync:
-
-```text
-/plugins install https://github.com/kl3574/codex-plugin-kimi
-/reload
-```
-
-Kimi Code copies local plugin installs to `$KIMI_CODE_HOME/plugins/managed/codex-plugin-kimi/`. Reinstall or use `/plugins reload` after changing the source checkout.
+- Git.
+- Kimi Code CLI available as `kimi`.
+- A working Kimi Code login/auth setup for real runtime reviews.
 
 ## Commands
 
-```text
-/codex-plugin-kimi:setup
-/codex-plugin-kimi:doctor
-/codex-plugin-kimi:doctor --probe-runtime
-/codex-plugin-kimi:review
-/codex-plugin-kimi:review --base main
-/codex-plugin-kimi:review --preset ship --base main
-/codex-plugin-kimi:adversarial-review --focus "challenge retry logic"
-/codex-plugin-kimi:elite-review --background
-/codex-plugin-kimi:deep-review --background
-/codex-plugin-kimi:security-review
-/codex-plugin-kimi:folder ./docs --preset research
-/codex-plugin-kimi:status
-/codex-plugin-kimi:result <job-id>
-/codex-plugin-kimi:cancel <job-id>
-```
+The plugin provides these slash-command prompt files under `commands/`:
 
-The helper can also be run directly:
+- `/codex-plugin-kimi:setup`
+- `/codex-plugin-kimi:doctor`
+- `/codex-plugin-kimi:enable`
+- `/codex-plugin-kimi:review`
+- `/codex-plugin-kimi:adversarial-review`
+- `/codex-plugin-kimi:elite-review`
+- `/codex-plugin-kimi:deep-review`
+- `/codex-plugin-kimi:security-review`
+- `/codex-plugin-kimi:folder`
+- `/codex-plugin-kimi:status`
+- `/codex-plugin-kimi:result`
+- `/codex-plugin-kimi:cancel`
+
+The command files delegate to:
 
 ```bash
-node scripts/codex-kimi-review.mjs doctor
-node scripts/codex-kimi-review.mjs doctor --probe-runtime
-node scripts/codex-kimi-review.mjs review --base main
+codex-kimi-review <command> <args>
 ```
 
-## Review Lanes
+If the helper is not installed globally, use:
 
-| Lane | Implementation |
-| --- | --- |
-| `review` | Uses native `codex review` for plain Git diffs when possible; falls back to `codex exec` for focused prompts, directory snapshots, and known native-review runtime failures. |
-| `adversarial-review` | Uses `codex exec --sandbox read-only` with a skeptical review prompt. |
-| `elite-review` | Uses `codex exec --sandbox read-only` with a ship/no-ship prompt. |
-| `deep-review` | Uses `codex exec --sandbox read-only` with a broad multi-pass prompt. |
-| `security-review` | Uses `codex exec --sandbox read-only` with a security/CWE/OWASP prompt. |
-| `folder` | Builds a bounded text snapshot and runs Codex with `--skip-git-repo-check`, so non-git folders are supported. |
+```bash
+node /home/lkx/codex-plugin-kimi/scripts/codex-kimi-review.mjs <command> <args>
+```
 
-## Presets
+## Helper Examples
 
-`--preset quick|ship|security|research|deep` maps to the closest review lane:
+```bash
+node scripts/codex-kimi-review.mjs setup
+node scripts/codex-kimi-review.mjs doctor --json
+node scripts/codex-kimi-review.mjs review --path .
+node scripts/codex-kimi-review.mjs review --path . --preset ship
+node scripts/codex-kimi-review.mjs security-review --path . --background
+node scripts/codex-kimi-review.mjs status
+node scripts/codex-kimi-review.mjs result <job-id>
+```
 
-- `quick` -> `review`
-- `ship` -> `elite-review`
-- `security` -> `security-review`
-- `research` -> `deep-review`
-- `deep` -> `deep-review`
+## Enable in Codex
 
-## Background Jobs
+From this checkout:
 
-Add `--background` to any review-like command. Jobs are stored under the first writable location:
+```bash
+node scripts/codex-kimi-review.mjs enable
+```
 
-1. `--job-dir <dir>`
-2. `CODEX_KIMI_REVIEW_JOB_DIR`
-3. `<git-root>/.codex-kimi/jobs`
-4. `~/.codex-kimi/jobs`
-5. `/tmp/codex-kimi/jobs`
+The helper adds a local marketplace entry to `~/.codex/config.toml`:
 
-Manage them with `status`, `result`, and `cancel`.
+```toml
+[marketplaces.kimi-review-private]
+source_type = "local"
+source = "/home/lkx/codex-plugin-kimi"
 
-## Safety Model
+[plugins."codex-plugin-kimi@kimi-review-private"]
+enabled = true
+```
 
-- Review lanes do not edit files.
-- Custom lanes use `codex exec --sandbox read-only --ask-for-approval never`.
-- Directory snapshots skip binary files and files larger than 1 MiB.
-- Untracked files in Git working-tree reviews are included with a 64 KiB per-file cap.
-- User focus text, diff text, and file contents are framed as untrusted review context.
+Run `--dry-run` first if you want to inspect the planned block.
 
-`doctor` is intentionally lightweight and does not spend model quota. Use `doctor --probe-runtime` when you want to verify that the current shell can actually start a nested Codex runtime.
+This repository also includes `.agents/plugins/marketplace.json`, so the
+checkout can be used directly as a local Codex marketplace source.
 
-## Parity With `codex-plugin-cc`
+## Review Modes
 
-See [docs/parity.md](docs/parity.md).
+- Working tree review: staged, unstaged, and untracked text files.
+- Branch review: `--base <ref>` or `--scope branch`.
+- Commit review: `--commit <sha>`.
+- Folder review: `folder <path>` or `--scope directory`.
+
+Binary files and large files are skipped in prompt snapshots. The helper never
+edits project files; it only builds review context and calls `kimi -p`.
 
 ## Verification
 
 ```bash
-npm test
-node scripts/validate-plugin.mjs
-node scripts/codex-kimi-review.mjs doctor
+npm run check
+python3 /home/lkx/.codex/skills/.system/plugin-creator/scripts/validate_plugin.py /home/lkx/codex-plugin-kimi
+node scripts/codex-kimi-review.mjs setup --json
+node scripts/codex-kimi-review.mjs doctor --json
 ```
 
-See [docs/verification.md](docs/verification.md) for current local results and known environment limits.
+See `docs/verification.md` for the latest local verification notes.
+
+## License
+
+Apache-2.0

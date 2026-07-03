@@ -1,22 +1,29 @@
 ---
 name: codex-kimi-setup
-description: Verify Codex CLI installation, authentication, git availability, and plugin readiness from Kimi Code.
+description: Use when installing, enabling, or diagnosing codex-plugin-kimi.
 ---
 
 # Codex Kimi Setup
 
-Run:
+Use this skill when the user asks to install, enable, or diagnose this plugin.
+
+## Commands
+
+- `codex-kimi-review setup`: checks Node, Git, Kimi CLI, and `kimi doctor`.
+- `codex-kimi-review doctor`: checks plugin files and job directory.
+- `codex-kimi-review doctor --probe-runtime`: runs a minimal real `kimi -p`.
+- `codex-kimi-review enable`: registers the local plugin in Codex config.
+
+## Verification
+
+After configuration changes, run:
 
 ```bash
-node "${KIMI_SKILL_DIR}/../../scripts/codex-kimi-review.mjs" setup $ARGUMENTS
+codex-kimi-review doctor --json
 ```
 
-For deeper diagnostics, run:
+If the local helper is not installed globally, use:
 
 ```bash
-node "${KIMI_SKILL_DIR}/../../scripts/codex-kimi-review.mjs" doctor $ARGUMENTS
+node /home/lkx/codex-plugin-kimi/scripts/codex-kimi-review.mjs doctor --json
 ```
-
-Only add `--probe-runtime` when the user explicitly asks to verify live Codex execution, because it starts a real Codex runtime and can consume model quota.
-
-Report the output directly. If setup or doctor fails, tell the user which listed dependency, path, or runtime probe failed.
