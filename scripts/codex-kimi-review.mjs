@@ -102,7 +102,7 @@ function usage() {
     "  codex-kimi-review cancel <job-id>",
     "",
     "Review flags:",
-    "  --path <dir>               target directory (default: cwd)",
+    "  --path <path>              target directory or file (default: cwd)",
     "  --base <ref>               review branch diff against ref",
     "  --commit <sha>             review one commit",
     "  --scope auto|working-tree|branch|directory",
@@ -373,7 +373,29 @@ function collectDirectoryContext(cwd, options) {
   };
 }
 
+function collectFileContext(file) {
+  const data = readSmallText(file, MAX_FILE_BYTES);
+  if (data.skipped) {
+    throw new Error(`Unable to review file ${file}: skipped ${data.skipped}${data.bytes ? `, ${data.bytes} bytes` : ""}.`);
+  }
+  const rel = path.basename(file);
+  return {
+    mode: "single-file",
+    summary: `Reviewing one file: ${file}.`,
+    changedFiles: [file],
+    content: [
+      section("File", file),
+      section("File Contents", `### ${rel}\n\`\`\`\n${data.text}\n\`\`\``)
+    ].join("\n")
+  };
+}
+
 function collectContext(cwd, options) {
+  const targetStat = fs.lstatSync(cwd);
+  if (targetStat.isSymbolicLink()) throw new Error(`Cannot review symlink path directly: ${cwd}`);
+  if (targetStat.isFile()) return { cwd: path.dirname(cwd), ...collectFileContext(cwd) };
+  if (!targetStat.isDirectory()) throw new Error(`Target path is not a file or directory: ${cwd}`);
+
   const scope = options.scope ?? "auto";
   const root = findGitRoot(cwd);
   if (options.commit) {

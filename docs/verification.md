@@ -103,3 +103,18 @@ codex-plugin-kimi@kimi-review` reports a successful install.
   create plugin PATH aliases in a restricted session.
 - Removed hardcoded local checkout helper paths from command and skill fallback
   docs; fallbacks now use `<plugin-root>/scripts/codex-kimi-review.mjs`.
+
+## 2026-07-03 Single File Path Fix
+
+- Bumped plugin and package version to `0.1.3`.
+- `codex-kimi-review review --path <file>` now builds a `single-file` review
+  context instead of treating the file path as a directory snapshot.
+- Added boundary coverage for Markdown file review paths to prevent the
+  `ENOTDIR: not a directory, scandir '<file>'` regression.
+- `npm run check`: passed. Static helper parse, local plugin validation, and
+  19 fake-Kimi boundary tests passed.
+- `validate_plugin.py /home/lkx/codex-plugin-kimi`: passed.
+- Source helper path regression check against
+  `/home/lkx/Desktop/cejiao/UniME/docs/benchmark_requirements.md` no longer
+  fails with `ENOTDIR`; with a 100 ms timeout it reached the real Kimi call and
+  timed out after `SIGTERM`.

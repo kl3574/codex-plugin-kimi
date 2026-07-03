@@ -147,6 +147,20 @@ test_non_git_folder_review() {
   contains "$out" "FAKE_KIMI_PROMPT" && contains "$out" "review_context"
 }
 
+test_single_file_review_calls_kimi() {
+  local file out
+  file="$TMP/single.md"
+  printf '# Requirement\n\nReview this file.\n' > "$file"
+  out="$(run_helper review --path "$file" 2>&1)" || {
+    printf '%s\n' "$out"
+    return 1
+  }
+  contains "$out" "FAKE_KIMI_PROMPT" &&
+    contains "$out" "single-file" &&
+    contains "$out" "single.md" &&
+    contains "$out" "Review this file."
+}
+
 test_empty_diff() {
   local repo out
   repo="$(make_repo empty)"
@@ -304,6 +318,7 @@ check "kimi child defaults NODE_USE_ENV_PROXY" test_kimi_defaults_node_env_proxy
 check "kimi child preserves NODE_USE_ENV_PROXY override" test_kimi_preserves_node_env_proxy_override
 check "install-bin writes executable shim" test_install_bin_writes_executable_shim
 check "non-git folder review calls kimi" test_non_git_folder_review
+check "single file review calls kimi" test_single_file_review_calls_kimi
 check "empty diff exits cleanly" test_empty_diff
 check "untracked review calls kimi" test_untracked_review_calls_kimi
 check "untracked symlink is not followed" test_untracked_symlink_is_not_followed
@@ -321,4 +336,4 @@ if [ "$FAILED" -ne 0 ]; then
   exit 1
 fi
 
-printf '18 test(s) passed\n'
+printf '19 test(s) passed\n'
