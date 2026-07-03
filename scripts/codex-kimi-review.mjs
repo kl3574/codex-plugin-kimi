@@ -636,6 +636,12 @@ function kimiRuntimeProbe(options = {}) {
   };
 }
 
+function codexConfigPath(options = {}) {
+  if (options.config) return path.resolve(options.config);
+  if (process.env.CODEX_HOME) return path.resolve(process.env.CODEX_HOME, "config.toml");
+  return path.join(os.homedir(), ".codex", "config.toml");
+}
+
 function handleSetup(argv) {
   const { options } = parseArgs(argv);
   const payload = setupPayload();
@@ -682,7 +688,7 @@ function handleDoctor(argv) {
 }
 
 function enablePayload(options) {
-  const configPath = path.resolve(options.config ?? path.join(os.homedir(), ".codex", "config.toml"));
+  const configPath = codexConfigPath(options);
   const marketplaceName = "kimi-review-private";
   const pluginKey = `codex-plugin-kimi@${marketplaceName}`;
   const block = [
