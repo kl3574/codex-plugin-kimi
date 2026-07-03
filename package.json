@@ -1,6 +1,6 @@
 {
   "name": "codex-plugin-kimi",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "type": "module",
   "description": "Codex plugin that delegates read-only review workflows to Kimi Code CLI.",
   "license": "Apache-2.0",

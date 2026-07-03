@@ -132,3 +132,21 @@ codex-plugin-kimi@kimi-review` reports a successful install.
   `EPERM connecting to 127.0.0.1:10808`, while the Kimi prompt probe still
   exited with status 1 and no output. This confirms the active blocker is
   sandbox socket denial, not the review path handling.
+
+## 2026-07-03 Large Prompt File Reference Transport
+
+- Bumped plugin and package version to `0.1.5`.
+- Large review prompts now use Kimi Code's documented file-reference flow:
+  the full bounded review context is written to a temporary Markdown file,
+  Kimi is launched with `--add-dir <context-dir>`, and the short `-p` prompt
+  asks it to read `@review-context-*.md`.
+- Added boundary coverage that simulates command-line prompt-size rejection and
+  verifies the wrapper switches to file-reference transport instead of sending a
+  huge `-p` argument.
+- Background job status writes now use same-directory temp-file plus rename to
+  avoid readers seeing partially written JSON.
+- `npm run check`: passed. Static helper parse, local plugin validation, and
+  21 fake-Kimi boundary tests passed.
+- Real Kimi smoke test with a synthetic large folder context returned
+  `TRANSPORT_OK`, confirming `kimi -p` can consume the temporary context through
+  the `@review-context-*.md` file reference without hitting `E2BIG`.

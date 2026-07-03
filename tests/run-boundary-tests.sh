@@ -27,6 +27,19 @@ fi
 if [ -n "$FAKE_KIMI_EMPTY_FAIL" ]; then
   exit 1
 fi
+if [ -n "${FAKE_KIMI_MAX_PROMPT_ARG_BYTES:-}" ]; then
+  previous=""
+  for arg in "$@"; do
+    if [ "$previous" = "-p" ] || [ "$previous" = "--prompt" ]; then
+      bytes="$(printf '%s' "$arg" | wc -c | tr -d ' ')"
+      if [ "$bytes" -gt "$FAKE_KIMI_MAX_PROMPT_ARG_BYTES" ]; then
+        echo "prompt argv too large: $bytes" >&2
+        exit 7
+      fi
+    fi
+    previous="$arg"
+  done
+fi
 case " $* " in
   *" --version "*) echo "kimi-code fake-0.0.0"; exit 0 ;;
   *" doctor "*) echo "Kimi doctor fake OK"; exit 0 ;;
@@ -222,6 +235,21 @@ test_context_budget_truncates_large_prompt() {
   contains "$out" "FAKE_KIMI_PROMPT" && contains "$out" "TRUNCATED"
 }
 
+test_large_context_uses_file_transport() {
+  local dir out
+  dir="$TMP/file-transport"
+  mkdir -p "$dir"
+  awk 'BEGIN { for (i = 0; i < 50000; i++) print "large context" }' > "$dir/large.txt"
+  out="$(PATH="$FAKE_BIN:$PATH" CODEX_KIMI_REVIEW_JOB_DIR="$JOB_DIR" FAKE_KIMI_MAX_PROMPT_ARG_BYTES=10000 "$NODE_BIN" "$HELPER" folder "$dir" --max-context-bytes 300000 2>&1)" || {
+    printf '%s\n' "$out"
+    return 1
+  }
+  contains "$out" "FAKE_KIMI_PROMPT" &&
+    contains "$out" "--add-dir" &&
+    contains "$out" "Read @review-context-" &&
+    ! contains "$out" "prompt argv too large"
+}
+
 test_timeout_reports_actionable_diagnostic() {
   local repo out status
   repo="$(make_repo timeout)"
@@ -336,6 +364,7 @@ check "empty diff exits cleanly" test_empty_diff
 check "untracked review calls kimi" test_untracked_review_calls_kimi
 check "untracked symlink is not followed" test_untracked_symlink_is_not_followed
 check "context budget truncates large prompt" test_context_budget_truncates_large_prompt
+check "large context uses file transport" test_large_context_uses_file_transport
 check "timeout reports actionable diagnostic" test_timeout_reports_actionable_diagnostic
 check "empty kimi failure reports actionable diagnostic" test_empty_kimi_failure_reports_actionable_diagnostic
 check "enable respects CODEX_HOME" test_enable_respects_codex_home
@@ -349,4 +378,4 @@ if [ "$FAILED" -ne 0 ]; then
   exit 1
 fi
 
-printf '20 test(s) passed\n'
+printf '21 test(s) passed\n'
