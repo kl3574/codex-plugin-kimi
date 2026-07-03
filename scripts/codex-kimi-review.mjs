@@ -3,6 +3,7 @@
 import { spawn, spawnSync } from "node:child_process";
 import crypto from "node:crypto";
 import fs from "node:fs";
+import net from "node:net";
 import os from "node:os";
 import path from "node:path";
 import process from "node:process";
@@ -182,6 +183,62 @@ function kimiEnv(env = process.env) {
   return {
     ...env,
     NODE_USE_ENV_PROXY: env.NODE_USE_ENV_PROXY ?? "1"
+  };
+}
+
+function proxyUrlFromEnv(env = process.env) {
+  return env.HTTPS_PROXY || env.https_proxy || env.HTTP_PROXY || env.http_proxy || env.ALL_PROXY || env.all_proxy || null;
+}
+
+function parseProxyEndpoint(raw) {
+  if (!raw) return null;
+  try {
+    const url = new URL(raw);
+    const port = url.port || (url.protocol === "https:" ? "443" : "80");
+    if (!url.hostname || !port) return null;
+    return {
+      raw,
+      protocol: url.protocol.replace(/:$/, ""),
+      host: url.hostname,
+      port: Number.parseInt(port, 10)
+    };
+  } catch {
+    return null;
+  }
+}
+
+function probeTcpEndpoint(endpoint, timeoutMs = 2000) {
+  if (!endpoint || !Number.isInteger(endpoint.port)) {
+    return Promise.resolve({ ran: false, ok: null, diagnostic: "no parseable proxy endpoint" });
+  }
+  return new Promise((resolve) => {
+    const socket = net.createConnection({ host: endpoint.host, port: endpoint.port });
+    const timer = setTimeout(() => {
+      socket.destroy();
+      resolve({ ran: true, ok: false, host: endpoint.host, port: endpoint.port, error: "timeout", diagnostic: `Timed out connecting to ${endpoint.host}:${endpoint.port}.` });
+    }, timeoutMs);
+    socket.once("connect", () => {
+      clearTimeout(timer);
+      socket.destroy();
+      resolve({ ran: true, ok: true, host: endpoint.host, port: endpoint.port, diagnostic: `Connected to ${endpoint.host}:${endpoint.port}.` });
+    });
+    socket.once("error", (error) => {
+      clearTimeout(timer);
+      resolve({ ran: true, ok: false, host: endpoint.host, port: endpoint.port, error: error.code ?? error.message, diagnostic: `${error.code ?? "ERROR"} connecting to ${endpoint.host}:${endpoint.port}: ${error.message}` });
+    });
+  });
+}
+
+async function proxyConnectivityProbe(env = process.env) {
+  const raw = proxyUrlFromEnv(env);
+  const endpoint = parseProxyEndpoint(raw);
+  if (!raw) return { configured: false, ran: false, ok: null, diagnostic: "no proxy environment variable is configured" };
+  if (!endpoint) return { configured: true, ran: false, ok: null, proxy: raw, diagnostic: "proxy environment variable is not a parseable URL" };
+  const result = await probeTcpEndpoint(endpoint);
+  return {
+    configured: true,
+    proxy: `${endpoint.protocol}://${endpoint.host}:${endpoint.port}`,
+    ...result
   };
 }
 
@@ -752,11 +809,14 @@ function handleInstallBin(argv) {
   if (writeError) process.exitCode = 1;
 }
 
-function handleDoctor(argv) {
+async function handleDoctor(argv) {
   const { options } = parseArgs(argv);
   const cwd = path.resolve(options.cwd ?? process.cwd());
   const jobsDir = resolveJobsDir(cwd, options);
   const setup = setupPayload();
+  const proxyProbe = options["probe-runtime"]
+    ? await proxyConnectivityProbe(kimiEnv())
+    : { ran: false, ok: null, note: "pass --probe-runtime to test proxy socket access" };
   const runtimeProbe = options["probe-runtime"]
     ? kimiRuntimeProbe(options)
     : { ran: false, ok: null, note: "pass --probe-runtime to run a minimal real kimi -p probe" };
@@ -771,6 +831,7 @@ function handleDoctor(argv) {
     cwd,
     cwd_is_git_repo: Boolean(findGitRoot(cwd)),
     supports_non_git_directory: true,
+    proxy_connectivity: proxyProbe,
     runtime_probe: runtimeProbe
   };
   payload.ok = setup.ok && payload.manifest_exists && payload.commands_dir_exists && payload.skills_dir_exists && (!runtimeProbe.ran || runtimeProbe.ok);
@@ -781,6 +842,7 @@ function handleDoctor(argv) {
     console.log(`Plugin root: ${payload.plugin_root}`);
     console.log(`Job dir: ${payload.job_dir}`);
     console.log("Non-git directory review: supported through bounded prompt snapshots");
+    console.log(`Proxy connectivity: ${proxyProbe.ran ? (proxyProbe.ok ? "OK" : `FAIL ${proxyProbe.diagnostic}`) : "not run; pass --probe-runtime"}`);
     console.log(`Kimi runtime probe: ${runtimeProbe.ran ? (runtimeProbe.ok ? "OK" : "FAIL") : "not run; pass --probe-runtime"}`);
     if (runtimeProbe.ran && !runtimeProbe.ok) {
       if (runtimeProbe.error) console.log(`Probe error: ${runtimeProbe.error}`);
@@ -1052,7 +1114,7 @@ async function main() {
         handleSetup(argv);
         break;
       case "doctor":
-        handleDoctor(argv);
+        await handleDoctor(argv);
         break;
       case "folder": {
         const first = argv.find((item) => !item.startsWith("--"));

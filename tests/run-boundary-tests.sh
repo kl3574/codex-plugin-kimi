@@ -118,6 +118,18 @@ test_kimi_preserves_node_env_proxy_override() {
   contains "$out" '"ok": true'
 }
 
+test_doctor_probe_reports_proxy_connectivity() {
+  local out
+  out="$(PATH="$FAKE_BIN:$PATH" CODEX_KIMI_REVIEW_JOB_DIR="$JOB_DIR" HTTPS_PROXY=http://127.0.0.1:1 https_proxy= HTTP_PROXY= http_proxy= ALL_PROXY= all_proxy= "$NODE_BIN" "$HELPER" doctor --probe-runtime --json 2>&1)" || {
+    printf '%s\n' "$out"
+    return 1
+  }
+  contains "$out" '"proxy_connectivity"' &&
+    contains "$out" '"configured": true' &&
+    contains "$out" '"host": "127.0.0.1"' &&
+    contains "$out" '"runtime_probe"'
+}
+
 test_install_bin_writes_executable_shim() {
   local target out shim_out
   target="$TMP/bin/codex-kimi-review"
@@ -316,6 +328,7 @@ check "setup succeeds with fake kimi" test_setup_success
 check "setup fails when kimi is missing" test_setup_missing_kimi
 check "kimi child defaults NODE_USE_ENV_PROXY" test_kimi_defaults_node_env_proxy
 check "kimi child preserves NODE_USE_ENV_PROXY override" test_kimi_preserves_node_env_proxy_override
+check "doctor probe reports proxy connectivity" test_doctor_probe_reports_proxy_connectivity
 check "install-bin writes executable shim" test_install_bin_writes_executable_shim
 check "non-git folder review calls kimi" test_non_git_folder_review
 check "single file review calls kimi" test_single_file_review_calls_kimi
@@ -336,4 +349,4 @@ if [ "$FAILED" -ne 0 ]; then
   exit 1
 fi
 
-printf '19 test(s) passed\n'
+printf '20 test(s) passed\n'

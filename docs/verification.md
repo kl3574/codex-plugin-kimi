@@ -118,3 +118,17 @@ codex-plugin-kimi@kimi-review` reports a successful install.
   `/home/lkx/Desktop/cejiao/UniME/docs/benchmark_requirements.md` no longer
   fails with `ENOTDIR`; with a 100 ms timeout it reached the real Kimi call and
   timed out after `SIGTERM`.
+
+## 2026-07-03 Runtime Sandbox Diagnostic
+
+- Bumped plugin and package version to `0.1.4`.
+- `codex-kimi-review doctor --probe-runtime --json` now reports
+  `proxy_connectivity`, a non-sensitive TCP probe of the configured proxy
+  endpoint, so Codex sandbox network denials such as `EPERM` are visible before
+  Kimi runtime failures are interpreted as authentication issues.
+- `npm run check`: passed. Static helper parse, local plugin validation, and
+  20 fake-Kimi boundary tests passed.
+- Source helper runtime diagnostic in the current Codex sandbox reported
+  `EPERM connecting to 127.0.0.1:10808`, while the Kimi prompt probe still
+  exited with status 1 and no output. This confirms the active blocker is
+  sandbox socket denial, not the review path handling.
