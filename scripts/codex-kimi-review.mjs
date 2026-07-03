@@ -16,6 +16,7 @@ const DEFAULT_TIMEOUT_MS = 30 * 60 * 1000;
 const MAX_BUFFER = 128 * 1024 * 1024;
 const MAX_FILE_BYTES = 1024 * 1024;
 const MAX_UNTRACKED_BYTES = 64 * 1024;
+const DEFAULT_MAX_CONTEXT_BYTES = 900 * 1024;
 const DEFAULT_EXCLUDES = new Set([
   ".git",
   ".codex-kimi",
@@ -109,6 +110,7 @@ function usage() {
     "  --add-dir <dir>            accepted for codex-plugin-cc parity; included as guidance",
     "  --system-prompt-extra <s>  append review instructions",
     "  --exclude <basename>       exclude name from directory snapshots",
+    "  --max-context-bytes <n>    cap review context before calling kimi -p",
     "  --timeout-ms <n>           review timeout (default 30 minutes)",
     "  --json                     machine-readable setup/doctor/status output",
     "  --probe-runtime            doctor only: run a minimal real kimi -p probe"
@@ -128,7 +130,7 @@ function parseArgs(argv) {
   const positionals = [];
   const multi = new Set(["add-dir", "exclude", "system-prompt-extra", "web-domain", "mcp-config"]);
   const booleans = new Set(["background", "json", "quiet", "debug", "legacy", "agentic", "long-context", "unrestricted", "probe-runtime", "dry-run", "inherit-mcp", "strict-mcp"]);
-  const values = new Set(["path", "base", "commit", "title", "scope", "preset", "job-dir", "model", "effort", "timeout-ms", "cwd", "focus", "snapshot-temp-root", "config", "profile", "permission-mode", "max-budget-usd"]);
+  const values = new Set(["path", "base", "commit", "title", "scope", "preset", "job-dir", "model", "effort", "timeout-ms", "cwd", "focus", "snapshot-temp-root", "config", "profile", "permission-mode", "max-budget-usd", "max-context-bytes"]);
 
   for (let index = 0; index < argv.length; index += 1) {
     const token = argv[index];
@@ -226,8 +228,10 @@ function isTextBuffer(buffer) {
 }
 
 function readSmallText(file, limit) {
-  const stat = fs.statSync(file);
+  const stat = fs.lstatSync(file);
+  if (stat.isSymbolicLink()) return { skipped: "symlink", bytes: null };
   if (stat.isDirectory()) return { skipped: "directory", bytes: null };
+  if (!stat.isFile()) return { skipped: "non-regular", bytes: null };
   if (stat.size > limit) return { skipped: "size", bytes: stat.size };
   const buffer = fs.readFileSync(file);
   if (!isTextBuffer(buffer)) return { skipped: "binary", bytes: stat.size };
@@ -380,8 +384,44 @@ function timeoutFrom(options, fallback = DEFAULT_TIMEOUT_MS) {
   return parsed;
 }
 
+function maxContextBytesFrom(options = {}) {
+  const raw = options["max-context-bytes"] ?? process.env.CODEX_KIMI_REVIEW_MAX_CONTEXT_BYTES;
+  if (raw == null || raw === "") return DEFAULT_MAX_CONTEXT_BYTES;
+  const parsed = Number.parseInt(raw, 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) throw new Error("--max-context-bytes must be a positive integer");
+  return parsed;
+}
+
+function truncateUtf8(text, maxBytes) {
+  const buffer = Buffer.from(text, "utf8");
+  if (buffer.length <= maxBytes) {
+    return { text, truncated: false, originalBytes: buffer.length };
+  }
+  const suffix = `\n\n[TRUNCATED: review context exceeded ${maxBytes} bytes; original context was ${buffer.length} bytes. Increase --max-context-bytes to include more.]\n`;
+  const suffixBytes = Buffer.byteLength(suffix, "utf8");
+  const keepBytes = Math.max(0, maxBytes - suffixBytes);
+  return {
+    text: `${buffer.subarray(0, keepBytes).toString("utf8")}${suffix}`,
+    truncated: true,
+    originalBytes: buffer.length
+  };
+}
+
+function applyContextBudget(context, options) {
+  const maxContextBytes = maxContextBytesFrom(options);
+  const limited = truncateUtf8(context.content, maxContextBytes);
+  return {
+    ...context,
+    content: limited.text,
+    contextTruncated: limited.truncated,
+    originalContextBytes: limited.originalBytes,
+    maxContextBytes
+  };
+}
+
 function runAsync(command, args, opts = {}) {
   return new Promise((resolve) => {
+    const timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
     const child = spawn(command, args, {
       cwd: opts.cwd ?? process.cwd(),
       env: opts.env ?? process.env,
@@ -390,11 +430,13 @@ function runAsync(command, args, opts = {}) {
     let stdout = "";
     let stderr = "";
     let settled = false;
+    let timedOut = false;
     const timer = setTimeout(() => {
       if (settled) return;
+      timedOut = true;
       child.kill("SIGTERM");
       setTimeout(() => child.kill("SIGKILL"), 3000).unref();
-    }, opts.timeoutMs ?? DEFAULT_TIMEOUT_MS);
+    }, timeoutMs);
     child.stdout.on("data", (data) => {
       stdout += data.toString();
     });
@@ -404,12 +446,12 @@ function runAsync(command, args, opts = {}) {
     child.on("error", (error) => {
       settled = true;
       clearTimeout(timer);
-      resolve({ status: null, error, stdout, stderr });
+      resolve({ status: null, error, stdout, stderr, timedOut, timeoutMs });
     });
     child.on("close", (status, signal) => {
       settled = true;
       clearTimeout(timer);
-      resolve({ status, signal, stdout, stderr });
+      resolve({ status, signal, stdout, stderr, timedOut, timeoutMs });
     });
   });
 }
@@ -519,13 +561,15 @@ async function executeReview(kind, options) {
   }
   const targetPath = path.resolve(options.path ?? options.cwd ?? process.cwd());
   if (!fs.existsSync(targetPath)) throw new Error(`Target path does not exist: ${targetPath}`);
-  const context = collectContext(targetPath, options);
+  const context = applyContextBudget(collectContext(targetPath, options), options);
   const result = await runKimi(effectiveKind, options, context);
   return {
     kind: effectiveKind,
     context,
     status: result.status,
     signal: result.signal ?? null,
+    timedOut: Boolean(result.timedOut),
+    timeoutMs: result.timeoutMs ?? timeoutFrom(options),
     stdout: result.stdout ?? "",
     stderr: result.stderr ?? "",
     error: result.error ? result.error.message : null
@@ -734,11 +778,14 @@ async function handleReviewLike(kind, argv) {
     throw error;
   }
   if (result.stderr && options.debug) process.stderr.write(result.stderr);
-  if (result.status !== 0) {
+  if (result.status !== 0 || result.timedOut) {
     console.error(`# ${REVIEW_KINDS[result.kind]?.label ?? "Kimi review"} failed`);
+    if (result.timedOut) console.error(`Timed out after ${result.timeoutMs} ms`);
+    if (result.status != null) console.error(`Exit status: ${result.status}`);
+    if (result.signal) console.error(`Signal: ${result.signal}`);
     if (result.error) console.error(result.error);
     if (result.stderr) console.error(result.stderr.trim());
-    process.exitCode = result.status ?? 1;
+    process.exitCode = result.status && result.status > 0 ? result.status : 1;
     return;
   }
   process.stdout.write(result.stdout || "(Kimi returned no stdout.)\n");
