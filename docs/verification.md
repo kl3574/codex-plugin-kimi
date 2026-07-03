@@ -34,7 +34,7 @@ codex-plugin-kimi@kimi-review-private` reports a successful install.
 ## 2026-07-03 Local Results
 
 - `npm run check`: passed. Static helper parse, local plugin validation, and
-  14 fake-Kimi boundary tests passed.
+  15 fake-Kimi boundary tests passed.
 - `validate_plugin.py /home/lkx/codex-plugin-kimi`: passed.
 - `setup --json`: passed. `kimi` and `git` were found; `kimi doctor` exited
   successfully with no output.
@@ -62,10 +62,13 @@ codex-plugin-kimi@kimi-review-private` reports a successful install.
   or signal when available.
 - Empty Kimi prompt-mode failures now print an actionable diagnostic when
   `kimi -p` exits nonzero without stdout, stderr, or an error object.
+- `enable` now respects `CODEX_HOME` when choosing the Codex config path, while
+  `--config <path>` still takes precedence. This keeps temporary and alternate
+  Codex homes installable.
 
 ## 2026-07-03 Runtime Probe Follow-up
 
-- `npm run check`: passed with 14 boundary tests.
+- `npm run check`: passed with 15 boundary tests.
 - `validate_plugin.py /home/lkx/codex-plugin-kimi`: passed.
 - `doctor --json --probe-runtime --timeout-ms 60000`: failed only at the real
   `kimi -p` runtime probe. Kimi exited with status 1 and produced no output;
