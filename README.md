@@ -92,6 +92,21 @@ codex plugin add codex-plugin-kimi@kimi-review-private
 codex plugin list
 ```
 
+## Install on Another Machine
+
+After the GitHub repository is public, install it on another computer with:
+
+```bash
+git clone https://github.com/kl3574/codex-plugin-kimi.git
+cd codex-plugin-kimi
+node scripts/codex-kimi-review.mjs setup
+node scripts/codex-kimi-review.mjs enable
+codex plugin add codex-plugin-kimi@kimi-review-private
+codex plugin list
+```
+
+Run `kimi login` first if Kimi Code CLI is not authenticated on that machine.
+
 ## Review Modes
 
 - Working tree review: staged, unstaged, and untracked text files.
